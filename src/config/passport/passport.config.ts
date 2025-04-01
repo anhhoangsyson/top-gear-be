@@ -4,7 +4,6 @@ import { Users } from '../../api/users/schema/user.schema';
 import bcrypt from 'bcryptjs';
 
 import { Strategy as JWTStrategy, ExtractJwt } from 'passport-jwt';
-
 passport.use(
   new LocalStrategy(
     {
@@ -13,6 +12,8 @@ passport.use(
     },
     async (usersname, password, done) => {
       try {
+        console.log(usersname, password);
+
         const user = await Users.findOne({ usersname });
         if (!user) {
           return done(null, false, { message: 'Incorrect username.' });

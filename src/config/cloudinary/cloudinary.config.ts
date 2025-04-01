@@ -1,4 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
+import multer from 'multer';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 const cloudName = process.env.CLOUDINARY_NAME;
 const cloudApiKey = process.env.CLOUDINARY_API_KEY;

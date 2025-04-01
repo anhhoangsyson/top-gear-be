@@ -22,7 +22,8 @@
     "@sendgrid/mail": "^8.1.4",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
-    "dotenv": "^16.4.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
     "express": "^4.21.1",
     "i": "^0.3.7",
@@ -39,7 +40,8 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "stripe": "^17.4.0",
-    "swagger-jsdoc": "^6.2.8"
+    "swagger-jsdoc": "^6.2.8",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -1,20 +1,39 @@
-import { Icategories, creatCategotries } from '../dto/categories.dto';
+import {
+  IAddCategoriesAttribute,
+  ICategoriesAttribute,
+  ICategories,
+  ICreateCategories,
+} from '../dto/categories.dto';
 import { CategoriesRepository } from '../repository/categories.repository';
 
 export class CategoriesService {
   private c = new CategoriesRepository();
 
-  async getAllCategories(): Promise<Icategories[]> {
+  async getAllCategories(): Promise<ICategories[]> {
     return this.c.getAllCategories();
   }
 
-  async creatCategotries(
-    usersData: Partial<creatCategotries>,
-  ): Promise<creatCategotries> {
-    return await this.c.createCategories(usersData);
+  async getCategoriesTree() {
+    return this.c.getCategoriesTree();
   }
 
-  async getCategoriesById(id: string): Promise<Icategories | null> {
+  async getCategoriesByParentId(parentId: string) {
+    return this.c.getCategoriesByParentId(parentId);
+  }
+  async getCategoriesByChildId(childId: string) {
+    return this.c.getCategoriesByChildId(childId);
+  }
+  async getAllParentCategories() {
+    return this.c.getAllParentCategories();
+  }
+
+  async createCategories(
+    data: Partial<ICreateCategories>,
+  ): Promise<ICreateCategories> {
+    return await this.c.createCategories(data);
+  }
+
+  async getCategoriesById(id: string): Promise<ICategories | null> {
     const categories = await this.c.getCategoriesById(id);
     if (!categories) {
       throw new Error('Categories not found');
@@ -22,7 +41,7 @@ export class CategoriesService {
     return categories;
   }
 
-  async deleteCategoriesById(id: string): Promise<Icategories | null> {
+  async deleteCategoriesById(id: string): Promise<ICategories | null> {
     const categories = await this.c.deleteCategoriesById(id);
     if (!categories) {
       throw new Error('Categories not found');
@@ -32,12 +51,24 @@ export class CategoriesService {
 
   async updateCategoriesById(
     id: string,
-    dataCategories: Icategories,
-  ): Promise<Icategories | null> {
+    dataCategories: ICategories,
+  ): Promise<ICategories | null> {
     const categories = await this.c.updateCategoriesById(id, dataCategories);
     if (!categories) {
       throw new Error('Categories not found');
     }
     return categories;
+  }
+
+  // categoriesAttiubute
+
+  async addAttributeToCategories(
+    userData: Partial<IAddCategoriesAttribute>,
+  ): Promise<ICategoriesAttribute> {
+    return await this.c.addAttribute(userData);
+  }
+
+  async getCategoriesAttributeById(categoryId: string) {
+    return await this.c.getAttributeById(categoryId);
   }
 }

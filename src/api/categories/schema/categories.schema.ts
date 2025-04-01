@@ -1,11 +1,41 @@
 import { Schema, model } from 'mongoose';
-import { Icategories } from '../dto/categories.dto';
+import { ICategoriesAttribute, ICategories } from '../dto/categories.dto';
 
-const CategoriesShema = new Schema<Icategories>(
+// const CategoriesShema = new Schema<ICategories>(
+const CategoriesShema = new Schema(
   {
-    name: { type: String, required: true },
+    categoryName: { type: String, required: true },
+    parentCategoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'categories',
+      default: null,
+    },
+    isFilter: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
 
-export const Categories = model<Icategories>('categories', CategoriesShema);
+const CategoriesAttributeSchema = new Schema<ICategoriesAttribute>(
+  {
+    categoriesId: {
+      type: Schema.Types.ObjectId,
+      ref: 'categories',
+      required: true,
+    },
+    attributeId: {
+      type: Schema.Types.ObjectId,
+      ref: 'attributes',
+      required: true,
+    },
+
+    attributeName: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+
+export const Categories = model<ICategories>('categories', CategoriesShema);
+export const CategoriesAtribute = model<ICategoriesAttribute>(
+  'categoriesAttribute',
+  CategoriesAttributeSchema,
+);

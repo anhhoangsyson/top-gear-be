@@ -7,6 +7,21 @@ const categoriesController = new CategoriesController();
 categoriesRouter.get('/', (req, res) => {
   categoriesController.getAllCategories(req, res);
 });
+categoriesRouter.get('/tree', (req, res) => {
+  categoriesController.getCategoriesTree(req, res);
+});
+
+categoriesRouter.get('/parent/:parentId', (req, res) => {
+  categoriesController.getCategoriesByParentId(req, res);
+});
+
+categoriesRouter.get('/parent', (req, res) => {
+  categoriesController.getAllParentCategories(req, res);
+});
+
+categoriesRouter.get('/categoriesByChildId/:childId', (req, res) => {
+  categoriesController.getCategoriesByChildId(req, res);
+});
 
 categoriesRouter.post('/', (req, res) => {
   categoriesController.createCategories(req, res);
@@ -22,6 +37,10 @@ categoriesRouter.delete('/:id', (req, res) => {
 
 categoriesRouter.patch('/:id', (req, res) => {
   categoriesController.updateCategoriesById(req, res); // Đã sửa từ updataMenusById thành updateCategoriesById
+});
+
+categoriesRouter.post('/attribute', (req, res) => {
+  categoriesController.addAttributeToCategories(req, res);
 });
 
 export default categoriesRouter;

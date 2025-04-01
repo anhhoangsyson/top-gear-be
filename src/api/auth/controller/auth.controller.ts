@@ -70,7 +70,7 @@ export class authController {
               ...user,
             };
             return res.json({
-              data: { userData },
+              data: userData,
               status: 200,
               message: 'dang nhap thanh cong',
             });

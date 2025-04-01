@@ -1,25 +1,26 @@
-import multer from 'multer';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import cloudinary from '../../config/cloudinary/cloudinary.config';
-import { RequestHandler } from 'express';
-interface CustomParams {
-  folder: string;
-  format: (req: Express.Request, file: Express.Multer.File) => string;
-  public_id: (req: Express.Request, file: Express.Multer.File) => string;
-}
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'upload',
-    format: (req, file) => 'webp',
-    public_id: (req, file) =>
-      Date.now() + '-' + file.originalname.split('.')[0],
-  } as CustomParams,
-});
+// import multer from 'multer';
+// import { CloudinaryStorage } from 'multer-storage-cloudinary';
+// import cloudinary from '../../config/cloudinary/cloudinary.config';
+// import { RequestHandler } from 'express';
+// interface CustomParams {
+//   folder: string;
+//   format: (req: Express.Request, file: Express.Multer.File) => string;
+//   public_id: (req: Express.Request, file: Express.Multer.File) => string;
+// }
+// const storage = new CloudinaryStorage({
+//   cloudinary: cloudinary,
+//   params: {
+//     folder: 'upload',
+//     format: (req, file) => 'webp',
+//     public_id: (req, file) =>
+//       Date.now() + '-' + file.originalname.split('.')[0],
+//   } as CustomParams,
+// });
 
-const upload = multer({
-  storage: storage,
-});
+// const upload = multer({
+//   storage: storage,
+// });
+
 // const uploadImage: RequestHandler = async (req, res, next) => {
 //     try {
 //       const file = req.file
@@ -38,4 +39,4 @@ const upload = multer({
 //     next()
 //   }
 
-export { upload };
+// export { upload };

@@ -10,6 +10,10 @@ const connectDatabase = async () => {
           socketTimeoutMS: 4500,
         },
       );
+      console.log(
+        `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@database.rylr1.mongodb.net/?retryWrites=true&w=majority&appName=database`,
+      );
+
       console.log('Connected mongodb thành công');
     } catch (error) {
       console.log('Không thể kết nối với mongodb. Lỗi: ', error);

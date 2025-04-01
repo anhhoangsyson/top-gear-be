@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { authController } from '../controller/auth.controller';
 import '../../../../docs/auth.swagger.js'; // Đảm bảo rằng đường dẫn này đúng
 import { validationesUsers } from '../../../middlewares/validations/validations.middlewares';
-
+// import  passport from '../../../config/passport/passport.config';
+import passport from 'passport';
 const authRouter = Router();
 const controller = new authController();
 

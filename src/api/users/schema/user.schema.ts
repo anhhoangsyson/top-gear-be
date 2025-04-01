@@ -11,7 +11,7 @@ const usersSchema = new Schema<IUser>(
     email: { type: String, required: true },
     phone: { type: Number, required: true },
     address: { type: String, required: true },
-    avatar: { type: String, required: true },
+    avatar: { type: String },
     sex: {
       type: String,
       enum: [sexUsers.MALE, sexUsers.FEMALE, sexUsers.OTHER],

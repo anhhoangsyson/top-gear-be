@@ -8,6 +8,7 @@ export class BlogiesRepository {
 
   async createBlog(blogData: Partial<creatblog>): Promise<creatblog> {
     const blog = new Blog(blogData);
+    // return await Blog.save();
     return await blog.save();
   }
 
