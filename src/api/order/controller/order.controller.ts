@@ -1,72 +1,40 @@
+import OrderService from '../service/order.service';
 import { Request, Response } from 'express';
-import { OrderService } from '../service/order.service'; // Đảm bảo rằng bạn đã tạo file orders.service.ts với service cho đơn hàng
+import { CreateOrderDto } from '../dto/order.dto';
+import { OrderStatus } from '../schema/order.schema';
+import { OrderRepository } from '../repository/order.repository';
 
-const orderService = new OrderService();
-
-export class OrderController {
-  async getAllOrders(req: Request, res: Response): Promise<void> {
+export default class OrderController {
+  private orderService = new OrderService();
+  private OrderRepository = new OrderRepository();
+  async createOrder(req: Request, res: Response) {
     try {
-      const orders = await orderService.getAllOrders();
-      res.status(200).json({
-        data: orders,
-        length: orders.length,
-        message: 'Lấy tất cả đơn hàng thành công',
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Lỗi máy chủ nội bộ' });
-    }
-  }
+      const createOrderDto = new CreateOrderDto(req.body);
+      const customerId = req.user?._id;
 
-  async createOrder(req: Request, res: Response): Promise<void> {
-    try {
-      const body = req.body;
-      const order = await orderService.createOrder(body);
+      if (!customerId) {
+        throw new Error('Cannot find customer information');
+      }
+
+      const order = await this.orderService.createOrder(
+        createOrderDto,
+        customerId,
+      );
       res.status(201).json({
         data: order,
-        message: 'Tạo đơn hàng thành công',
+        message: 'Order created successfully',
       });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || 'Lỗi máy chủ nội bộ' });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
     }
   }
 
-  async getOrderById(req: Request, res: Response): Promise<void> {
-    try {
-      const id = req.params.id;
-      const order = await orderService.getOrderById(id);
-      res.status(200).json({
-        data: order,
-        message: 'Lấy đơn hàng theo ID thành công',
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: 'Lỗi máy chủ nội bộ' });
-    }
-  }
-
-  async deleteOrderById(req: Request, res: Response): Promise<void> {
-    try {
-      const id = req.params.id;
-      const order = await orderService.deleteOrderById(id);
-      res.status(200).json({
-        data: order,
-        message: 'Xóa đơn hàng thành công',
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || 'Lỗi máy chủ nội bộ' });
-    }
-  }
-
-  async updateOrderById(req: Request, res: Response): Promise<void> {
-    try {
-      const id = req.params.id;
-      const orderData = req.body;
-      const order = await orderService.updateOrderById(id, orderData);
-      res.status(200).json({
-        data: order,
-        message: 'Cập nhật đơn hàng thành công',
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message || 'Lỗi máy chủ nội bộ' });
-    }
-  }
+  // private async updateOrderStatus(orderId: string, status: OrderStatus, transactionId: string, paymentUrl?: string) {
+  //     const order = await this.orderService.findOrderById(orderId);
+  //     if (!order) throw new Error("Đơn hàng không tồn tại");
+  //     return this.OrderRepository.updateOrderStatus(orderId, status, transactionId);
+  //   }
 }

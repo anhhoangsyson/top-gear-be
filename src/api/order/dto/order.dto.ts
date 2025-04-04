@@ -1,21 +1,30 @@
-import mongoose, { mongo } from 'mongoose';
-
-export interface IOrder {
-  _id: string; // ID của đơn hàng
-  user_id: mongoose.Schema.Types.ObjectId;
-  address: string; // Địa chỉ giao hàng
-  phone: string; // Số điện thoại liên hệ
-  status: string; // Trạng thái của đơn hàng (ví dụ: "pending", "completed", "canceled")
-  total: number; // Tổng giá trị của đơn hàng
-  createdAt: Date; // Thời gian tạo đơn hàng
-  updatedAt: Date; // Thời gian cập nhật đơn hàng
+interface CartItem {
+  productVariantId: string;
+  quantity: number;
+  price: number;
 }
+export enum PaymentMethod {
+  CASH = 'cash',
+  ZALOPAY = 'zalopay',
+}
+export class CreateOrderDto {
+  customerId: string;
+  address: string;
+  paymentMethod: PaymentMethod;
+  voucherCode?: string | null;
+  cartItem: CartItem[];
 
-// DTO cho việc tạo đơn hàng
-export interface CreateOrderDto {
-  user_id: mongoose.Schema.Types.ObjectId;
-  address: string; // Địa chỉ giao hàng
-  phone: string; // Số điện thoại liên hệ
-  status: string; // Trạng thái của đơn hàng
-  total: number; // Tổng giá trị của đơn hàng
+  constructor(data: {
+    customerId: string;
+    address: string;
+    paymentMethod: string;
+    voucherCode?: string | null;
+    cartItem: CartItem[];
+  }) {
+    this.customerId = data.customerId;
+    this.address = data.address;
+    this.paymentMethod = data.paymentMethod as PaymentMethod;
+    this.voucherCode = data.voucherCode || null;
+    this.cartItem = data.cartItem;
+  }
 }

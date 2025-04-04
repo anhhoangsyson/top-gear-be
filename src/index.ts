@@ -12,10 +12,9 @@ import commentsRouter from './api/comments/router/comments.router';
 import likesRouter from './api/like/router/likes.router';
 import cartsRouter from './api/carts/router/carts.router';
 import cartDetailsRouter from './api/carts_details/router/carts_details.router';
-import ordersRouter from './api/order/router/order.router';
 import passport = require('passport');
 import authRouter from './api/auth/router/auth.router';
-
+import orderRouter from './api/order/router/order.router';
 import attributeRouter from './api/attribute/router/attribute.router';
 import productRouter from './api/product/router/product.router';
 import productVariantsRouter from './api/productVariants/router/productVariants.router';
@@ -54,13 +53,12 @@ app.use('/api/v1/comments', commentsRouter);
 app.use('/api/v1/likes', likesRouter);
 app.use('/api/v1/carts', cartsRouter);
 app.use('/api/v1/cart-details', cartDetailsRouter);
-app.use('/api/v1/order', ordersRouter);
 app.use('/api/v1/attribute', attributeRouter);
 app.use('/api/v1/products', productRouter);
 app.use('/api/v1/pvariants', productVariantsRouter);
 app.use('/api/v1/pattributes', productAttributesRouter);
 app.use('/api/v1/pimages', productImageRouter);
-
+app.use('/api/v1/order', orderRouter);
 app.listen(PORT, () => {
   console.log(`Server đang chạy ${PORT}`);
 });

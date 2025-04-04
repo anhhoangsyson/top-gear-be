@@ -12,19 +12,19 @@ export interface ShippingAddress {
   country: string;
 }
 
-export interface Order {
-  id: string;
-  userId: string;
-  items: OrderItem[];
-  totalAmount: number;
-  status:
-    | 'pending'
-    | 'processing'
-    | 'shipped'
-    | 'delivered'
-    | 'completed'
-    | 'cancelled';
-  shippingAddress: ShippingAddress;
-  paymentMethod: string;
-  createdAt: string;
-}
+// export interface Order {
+//   id: string;
+//   userId: string;
+//   items: OrderItem[];
+//   totalAmount: number;
+//   status:
+//     | 'pending'
+//     | 'processing'
+//     | 'shipped'
+//     | 'delivered'
+//     | 'completed'
+//     | 'cancelled';
+//   shippingAddress: ShippingAddress;
+//   paymentMethod: string;
+//   createdAt: string;
+// }

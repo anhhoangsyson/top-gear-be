@@ -67,7 +67,14 @@ export class authController {
             const userData = {
               token: accesstoken,
               RefreshToken: Refresh,
-              ...user,
+              _id: user._id,
+              role: user.role,
+              fullname: user.fullname,
+              email: user.email,
+              usersname: user.usersname,
+              phone: user.phone,
+              address: user.address,
+              sex: user.sex,
             };
             return res.json({
               data: userData,
