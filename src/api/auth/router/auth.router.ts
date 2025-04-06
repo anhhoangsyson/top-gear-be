@@ -4,6 +4,7 @@ import '../../../../docs/auth.swagger.js'; // Đảm bảo rằng đường dẫ
 import { validationesUsers } from '../../../middlewares/validations/validations.middlewares';
 // import  passport from '../../../config/passport/passport.config';
 import passport from 'passport';
+import authenticateJWT from '../../../middlewares/authenticate/authenticateJWT';
 const authRouter = Router();
 const controller = new authController();
 
@@ -17,6 +18,8 @@ authRouter.post('/login', (req, res, next) => {
   controller.login(req, res, next);
 });
 
-// Nếu bạn cần thêm các endpoint khác liên quan đến xác thực, bạn có thể thêm ở đây
+authRouter.get('/me', authenticateJWT, (req, res) => {
+  controller.me(req, res);
+});
 
 export default authRouter;

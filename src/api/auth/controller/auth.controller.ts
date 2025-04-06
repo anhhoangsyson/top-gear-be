@@ -90,4 +90,40 @@ export class authController {
       },
     )(req, res, next);
   }
+
+  async me(req: Request, res: Response): Promise<void> {
+    try {
+      // Lấy thông tin user từ req.user (do middleware xác thực gắn vào)
+      const user = req.user;
+
+      if (!user) {
+        res
+          .status(401)
+          .json({
+            message:
+              'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.',
+          });
+        return;
+      }
+
+      // Truy vấn thông tin user từ database dựa trên _id (nếu cần thiết)
+      const userData = await Users.findById(user._id).select('-password -_id'); // Loại bỏ password và _id
+
+      if (!userData) {
+        res.status(404).json({ message: 'Người dùng không tồn tại' });
+        return;
+      }
+
+      // Trả về thông tin user
+      res.status(200).json({
+        data: userData,
+        status: 200,
+        message: 'Lấy thông tin người dùng thành công',
+      });
+    } catch (error: any) {
+      res
+        .status(500)
+        .json({ message: error.message || 'Internal server error' });
+    }
+  }
 }
