@@ -1,7 +1,7 @@
 interface CartItem {
   productVariantId: string;
   quantity: number;
-  price: number;
+  variantPrice: number;
 }
 export enum PaymentMethod {
   CASH = 'cash',

@@ -14,7 +14,7 @@ export default class OrderService {
   ): Promise<any> {
     const { address, paymentMethod, voucherCode, cartItem } = createOrderData;
     const subTotal = cartItem.reduce(
-      (sum, item) => sum + item.price * item.quantity,
+      (sum, item) => sum + item.variantPrice * item.quantity,
       0,
     );
     // const subTotal = 100
@@ -71,8 +71,8 @@ export default class OrderService {
       orderId: order._id as string,
       productVariantId: item.productVariantId,
       quantity: item.quantity,
-      price: item.price,
-      subTotal: item.quantity * item.price,
+      price: item.variantPrice,
+      subTotal: item.quantity * item.variantPrice,
     }));
 
     const createOrderDetails =
