@@ -69,7 +69,7 @@ export default class OrderService {
 
     const orderDetailsData = cartItem.map((item) => ({
       orderId: order._id as string,
-      productVariantId: item.productVariantId,
+      productVariantId: item._id,
       quantity: item.quantity,
       price: item.variantPrice,
       subTotal: item.quantity * item.variantPrice,

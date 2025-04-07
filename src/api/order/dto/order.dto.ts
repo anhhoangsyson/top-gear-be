@@ -1,5 +1,5 @@
 interface CartItem {
-  productVariantId: string;
+  _id: string;
   quantity: number;
   variantPrice: number;
 }
