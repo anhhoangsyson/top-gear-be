@@ -6,7 +6,7 @@ import { OrderRepository } from '../repository/order.repository';
 
 export default class OrderController {
   private orderService = new OrderService();
-  private OrderRepository = new OrderRepository();
+  private orderRepository = new OrderRepository();
   async createOrder(req: Request, res: Response) {
     try {
       const createOrderDto = new CreateOrderDto(req.body);

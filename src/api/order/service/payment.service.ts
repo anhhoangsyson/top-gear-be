@@ -46,7 +46,7 @@ export class PaymentService {
         bank_code: '',
         callback_url:
           // 'https://210f-42-115-74-118.ngrok-free.app/api/v1/order/callback', use this for local dev
-          'https://top-gear-7o5h5vkx5-anhhoangsysons-projects.vercel.app/api/v1/order/callback',
+          'https://top-gear-be.vercel.app/api/v1/order/callback',
         //  use above for production
         mac: '',
       };
