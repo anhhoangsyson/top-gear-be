@@ -12,7 +12,8 @@ export default class OrderService {
     createOrderData: CreateOrderDto,
     customerId: string,
   ): Promise<any> {
-    const { address, paymentMethod, voucherCode, cartItem } = createOrderData;
+    const { address, paymentMethod, voucherCode, cartItem, note } =
+      createOrderData;
     const subTotal = cartItem.reduce(
       (sum, item) => sum + item.variantPrice * item.quantity,
       0,
@@ -62,6 +63,7 @@ export default class OrderService {
       voucherId,
       paymentMethod,
       orderDetails: [], // Chưa có chi tiết đơn hàng tại thời điểm này
+      note: note || '',
     };
 
     const order = await this.orderRepository.createOrder(orderData);

@@ -19,8 +19,9 @@ export interface IOrder extends Document {
   paymentMethod: String;
   paymentUrl: string;
   paymentTransactionId: string;
-  orderDetails: Array<any>; // Assuming OrderDetail is another model, you can replace 'any' with the actual type
+  orderDetails: Array<any>;
   createAt: Date;
+  note?: string; // Assuming OrderDetail is another model, you can replace 'any' with the actual type
 }
 const orderSchema = new Schema<IOrder>({
   voucherId: { type: String, default: null },
@@ -38,5 +39,6 @@ const orderSchema = new Schema<IOrder>({
   paymentTransactionId: { type: String, default: null },
   orderDetails: [{ type: Schema.Types.ObjectId, ref: 'OrderDetail' }],
   createAt: { type: Date, default: Date.now },
+  note: { type: String, default: '' },
 });
 export default model<IOrder>('Order', orderSchema);

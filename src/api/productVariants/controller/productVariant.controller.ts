@@ -154,4 +154,19 @@ export const ProductVariantController = {
       res.status(500).json({ message: 'Loi khong sac dinh', error });
     }
   },
+
+  async getProductVariantsRelated(req: Request, res: Response) {
+    try {
+      const variantId = req.params.variantId;
+      const productVariantsRelated =
+        await ProductVariantsService.getProductVariantsRelated(variantId);
+      res.status(200).json({
+        data: productVariantsRelated,
+        message: 'Lấy tất cả sản phẩm liên quan thành công',
+        length: productVariantsRelated.length,
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Loi khong sac dinh', error });
+    }
+  },
 };

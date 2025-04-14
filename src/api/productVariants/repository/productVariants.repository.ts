@@ -297,4 +297,94 @@ export const ProductVariantsRepository = {
       { new: true },
     );
   },
+
+  async getProductVariantsRelated(productVariantId: string) {
+    const result = await ProductVariants.aggregate([
+      // Bước 1: Tìm biến thể hiện tại để lấy productId
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(productVariantId),
+        },
+      },
+      // Bước 2: Tìm tất cả biến thể liên quan có cùng productId
+      {
+        $lookup: {
+          from: 'productvariants', // Tên collection ProductVariants
+          let: { currentProductId: '$productId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$productId', '$$currentProductId'] },
+                    {
+                      $ne: [
+                        '$_id',
+                        new mongoose.Types.ObjectId(productVariantId),
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'relatedVariants',
+        },
+      },
+      // Bước 3: Bỏ biến thể hiện tại, chỉ giữ relatedVariants
+      {
+        $unwind: {
+          path: '$relatedVariants',
+          preserveNullAndEmptyArrays: true, // Giữ nếu không có biến thể liên quan
+        },
+      },
+      // Bước 4: Lookup để lấy ảnh từ collection images
+      {
+        $lookup: {
+          from: 'productimages', // Tên collection Images
+          localField: 'relatedVariants._id',
+          foreignField: 'productVariantId',
+          as: 'relatedVariants.images',
+        },
+      },
+      // Bước 5: Dựng dữ liệu trả về
+      {
+        $project: {
+          _id: '$relatedVariants._id',
+          productId: '$relatedVariants.productId',
+          variantName: '$relatedVariants.variantName',
+          variantStock: '$relatedVariants.variantStock',
+          variantPrice: '$relatedVariants.variantPrice',
+          variantPriceSale: '$relatedVariants.variantPriceSale',
+          image: { $arrayElemAt: ['$relatedVariants.images.imageUrl', 0] }, // Lấy ảnh đầu tiên
+        },
+      },
+      // Bước 6: Nhóm lại thành mảng
+      {
+        $group: {
+          _id: null,
+          variants: {
+            $push: {
+              _id: '$_id',
+              productId: '$productId',
+              variantName: '$variantName',
+              variantStock: '$variantStock',
+              variantPrice: '$variantPrice',
+              variantPriceSale: '$variantPriceSale',
+              image: { $ifNull: ['$image', ''] }, // Đảm bảo image là chuỗi
+            },
+          },
+        },
+      },
+      // Bước 7: Chỉ trả về mảng variants
+      {
+        $project: {
+          _id: 0,
+          variants: 1,
+        },
+      },
+    ]);
+
+    return result[0]?.variants || []; // Trả về mảng variants, hoặc mảng rỗng nếu không có
+  },
 };

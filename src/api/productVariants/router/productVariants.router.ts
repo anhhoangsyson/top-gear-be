@@ -41,5 +41,7 @@ productVariantsRouter.put('/active/:productVariantsId', (req, res) => {
 productVariantsRouter.put('/inactive/:productVariantsId', (req, res) => {
   ProductVariantController.inActiveProductVariantsById(req, res);
 });
-
+productVariantsRouter.get('/related/:variantId', (req, res) => {
+  ProductVariantController.getProductVariantsRelated(req, res);
+});
 export default productVariantsRouter;

@@ -56,4 +56,8 @@ export const ProductVariantsService = {
       productVariantsId,
     );
   },
+
+  async getProductVariantsRelated(productId: string) {
+    return await ProductVariantsRepository.getProductVariantsRelated(productId);
+  },
 };
