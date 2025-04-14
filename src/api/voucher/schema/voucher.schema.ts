@@ -1,29 +1,17 @@
-import { Schema, model, Document } from 'mongoose';
-
-export interface IVoucher extends Document {
-  code: string;
-  discountType: 'fixed' | 'percentage';
-  discountValue: number;
-  minOrderValue: number;
-  maxDiscount: number;
-  startDate: Date;
-  endDate: Date;
-  isActive: boolean;
-  usageLimit: number;
-  usedCount: number;
-}
-
-const VoucherSchema = new Schema<IVoucher>({
-  code: { type: String, required: true, unique: true },
-  discountType: { type: String, enum: ['fixed', 'percentage'], required: true },
-  discountValue: { type: Number, required: true },
-  minOrderValue: { type: Number, default: 0 },
-  maxDiscount: { type: Number, default: Infinity },
-  startDate: { type: Date, required: true },
-  endDate: { type: Date, required: true },
-  isActive: { type: Boolean, default: true },
-  usageLimit: { type: Number, default: Infinity },
-  usedCount: { type: Number, default: 0 },
-});
-
-export default model<IVoucher>('Voucher', VoucherSchema);
+import { Schema, model } from 'mongoose';
+import { IVoucher } from '../dto/vocher.dto'; // Ensure you have created the file voucher.dto.ts with the IVoucher interface
+const voucherSchema = new Schema<IVoucher>(
+  {
+    code: { type: String, required: true, unique: true }, // Unique code for the voucher
+    expiredDate: { type: Date, required: true }, // Expiration date of the voucher
+    pricePercent: { type: Number, required: true, min: 0 }, // Discount percentage (should not be negative)
+    priceOrigin: { type: Number, required: true, min: 0 }, // Original price before discount (should not be negative)
+    status: {
+      type: String,
+      enum: ['active', 'inactive'], // Possible statuses
+      default: 'active', // Default status
+    },
+  },
+  { timestamps: true }, // Automatically manage createdAt and updatedAt fields
+);
+export const Voucher = model<IVoucher>('Voucher', voucherSchema);

@@ -20,6 +20,7 @@ import productRouter from './api/product/router/product.router';
 import productVariantsRouter from './api/productVariants/router/productVariants.router';
 import productImageRouter from './api/produductImage/router/productImage.router';
 import locationRouter from './api/location/route/location.router';
+import vouchersRouter from './api/voucher/router/voucher.router';
 const cors = require('cors');
 
 dotenv.config();
@@ -61,6 +62,8 @@ app.use('/api/v1/pattributes', productAttributesRouter);
 app.use('/api/v1/pimages', productImageRouter);
 app.use('/api/v1/order', orderRouter);
 app.use('/api/v1/location', locationRouter);
+app.use('/api/v1/vouchers', vouchersRouter);
+
 app.listen(PORT, () => {
   console.log(`Server đang chạy ${PORT}`);
 });

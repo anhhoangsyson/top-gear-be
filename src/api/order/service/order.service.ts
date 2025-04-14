@@ -1,6 +1,6 @@
 import { CreateOrderDto, PaymentMethod } from '../dto/order.dto';
 import { OrderRepository } from '../repository/order.repository';
-import Voucher from '../../voucher/schema/voucher.schema';
+import { Voucher } from '../../voucher/schema/voucher.schema';
 import { OrderStatus } from '../schema/order.schema';
 import { PaymentService } from './payment.service';
 import Order from '../schema/order.schema';
@@ -22,31 +22,31 @@ export default class OrderService {
     let voucherId: string | null = null;
 
     // checkVoucher
-    if (voucherCode) {
-      const voucher = await Voucher.findOne({ code: voucherCode }).lean();
-      if (
-        !voucher ||
-        !voucher.isActive ||
-        voucher.usedCount >= voucher.usageLimit
-      ) {
-        throw new Error('Voucher không hợp lệ hoặc đã hết lượt sử dụng');
-      }
-      if (subTotal < voucher.minOrderValue) {
-        throw new Error('Giá trị đơn hàng không đủ để sử dụng voucher này');
-      }
-      discountAmount =
-        voucher.discountType === 'fixed'
-          ? voucher.discountValue
-          : Math.min(
-              subTotal * (voucher.discountValue / 100),
-              voucher.maxDiscount,
-            );
-      voucherId = voucher._id.toString();
-      await Voucher.findByIdAndUpdate(
-        { code: voucherCode },
-        { $inc: { usedCount: 1 } },
-      );
-    }
+    // if (voucherCode) {
+    //   const voucher = await Voucher.findOne({ code: voucherCode }).lean();
+    //   if (
+    //     !voucher ||
+    //     !voucher.status ||
+    //     voucher. >= voucher.usageLimit
+    //   ) {
+    //     throw new Error('Voucher không hợp lệ hoặc đã hết lượt sử dụng');
+    //   }
+    //   if (subTotal < voucher.minOrderValue) {
+    //     throw new Error('Giá trị đơn hàng không đủ để sử dụng voucher này');
+    //   }
+    //   discountAmount =
+    //     voucher.discountType === 'fixed'
+    //       ? voucher.discountValue
+    //       : Math.min(
+    //         subTotal * (voucher.discountValue / 100),
+    //         voucher.maxDiscount,
+    //       );
+    //   voucherId = voucher._id.toString();
+    //   await Voucher.findByIdAndUpdate(
+    //     { code: voucherCode },
+    //     { $inc: { usedCount: 1 } },
+    //   );
+    // }
 
     const intiialStatus =
       paymentMethod === 'zalopay'
