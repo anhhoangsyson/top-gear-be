@@ -123,4 +123,15 @@ export default class OrderService {
     if (!order) throw new Error('Đơn hàng không tồn tại');
     return order;
   }
+
+  async getMyOrders(customerId: string) {
+    const orders = await this.orderRepository.getMyOrders(customerId);
+
+    if (orders.length === 0) {
+      return {
+        message: 'Bạn chưa có đơn hàng nào',
+      };
+    }
+    return orders;
+  }
 }

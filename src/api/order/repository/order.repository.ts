@@ -45,4 +45,8 @@ export class OrderRepository {
       { new: true },
     );
   }
+
+  async getMyOrders(customerId: string) {
+    return await Order.find({ customerId: customerId });
+  }
 }

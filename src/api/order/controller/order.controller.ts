@@ -58,4 +58,30 @@ export default class OrderController {
       });
     }
   }
+
+  async getMyOrders(req: Request, res: Response) {
+    const customerId = req.user?._id;
+    console.log('customerId', customerId);
+    try {
+      if (!customerId) {
+        res.status(401).json({
+          message: 'Unauthorized',
+          error: 'Cannot find customer information',
+        });
+      }
+
+      if (customerId) {
+        const orders = await this.orderService.getMyOrders(customerId);
+        res.status(200).json({
+          data: orders,
+          message: 'Orders retrieved successfully',
+        });
+      }
+    } catch (error) {
+      res.status(404).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
 }
