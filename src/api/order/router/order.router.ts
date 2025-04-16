@@ -18,4 +18,7 @@ orderRouter.post('/query', authenticateJWT, (req, res) => {
   paymentController.queryTransactionStatus(req, res);
 });
 
+orderRouter.get('/:id', authenticateJWT, (req, res) => {
+  orderController.getOrderById(req, res);
+});
 export default orderRouter;

@@ -37,4 +37,25 @@ export default class OrderController {
   //     if (!order) throw new Error("Đơn hàng không tồn tại");
   //     return this.OrderRepository.updateOrderStatus(orderId, status, transactionId);
   //   }
+
+  async getOrderById(req: Request, res: Response) {
+    try {
+      const orderId = req.params.id;
+      const order = await this.orderService.findOrderById(orderId);
+      if (!order) {
+        return res.status(201).json({
+          message: 'Order not found',
+        });
+      }
+      res.status(200).json({
+        data: order,
+        message: 'Order retrieved successfully',
+      });
+    } catch (error) {
+      res.status(404).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
 }
