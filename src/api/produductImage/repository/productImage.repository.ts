@@ -15,6 +15,10 @@ export class ProductImageRepository {
     return await ProductImage.find({ productVariantId });
   }
 
+  async getFirstProductImageByProductVariantId(productVariantId: string) {
+    return await ProductImage.find({ productVariantId }).limit(1);
+  }
+
   async deleteProductImageById(id: string) {
     return await ProductImage.findByIdAndDelete(id);
   }
