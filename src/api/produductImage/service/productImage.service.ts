@@ -18,6 +18,12 @@ export class ProductImageService {
     );
   }
 
+  async getFirstProductImageByProductVariantId(productVariantId: string) {
+    return await this.productImageRepository.getFirstProductImageByProductVariantId(
+      productVariantId,
+    );
+  }
+
   async deleteProductImageById(id: string) {
     return await this.productImageRepository.deleteProductImageById(id);
   }

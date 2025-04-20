@@ -73,4 +73,23 @@ export class ProductImageController {
       res.status(500).json({ message: 'Lỗi server', error });
     }
   }
+
+  async getFirstProductImageByProductVariantId(req: Request, res: Response) {
+    try {
+      const productVariantId = req.params.productVariantId;
+      const productImage =
+        await this.productImageService.getFirstProductImageByProductVariantId(
+          productVariantId,
+        );
+      if (!productImage) {
+        return res.status(404).json({ message: 'Image not found' });
+      }
+      return res.status(200).json({
+        data: productImage,
+        message: 'Get first product image successfully',
+      });
+    } catch (error) {
+      return res.status(500).send({ message: 'Internal Server Error', error });
+    }
+  }
 }

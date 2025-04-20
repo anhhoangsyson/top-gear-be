@@ -12,4 +12,7 @@ productImageRouter.delete('/:imgId', (req, res) => {
   productImageController.deleteProductImage(req, res);
 });
 
+productImageRouter.get('/:productVariantId', (req, res) => {
+  productImageController.getFirstProductImageByProductVariantId(req, res);
+});
 export default productImageRouter;
