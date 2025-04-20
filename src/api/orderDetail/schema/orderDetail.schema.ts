@@ -1,6 +1,7 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document } from 'mongoose';
 
 export interface IOrderDetail {
+  _id?: string;
   orderId: string;
   productVariantId: string;
   quantity: number;

@@ -12,6 +12,7 @@ export default class OrderService {
     createOrderData: CreateOrderDto,
     customerId: string,
   ): Promise<any> {
+    console.log('Entering findOrderById with orderId');
     const { address, paymentMethod, voucherCode, cartItem, note } =
       createOrderData;
     const subTotal = cartItem.reduce(
@@ -66,22 +67,23 @@ export default class OrderService {
       note: note || '',
     };
 
-    const order = await this.orderRepository.createOrder(orderData);
-    console.log('order', order);
-
+    const order = (await this.orderRepository.createOrder(orderData)) as {
+      _id: string;
+      [key: string]: any;
+    };
+    console.log('order da tao', order);
+    console.log('Cart items:', cartItem);
     const orderDetailsData = cartItem.map((item) => ({
-      orderId: order._id as string,
+      orderId: order._id,
       productVariantId: item._id,
       quantity: item.quantity,
       price: item.variantPrice,
       subTotal: item.quantity * item.variantPrice,
     }));
-
     const createOrderDetails =
       await this.orderRepository.createOrderDetail(orderDetailsData);
-    const orderDetailIds = createOrderDetails.map(
-      (item) => item.productVariantId,
-    );
+    const orderDetailIds = createOrderDetails.map((item) => item._id);
+
     // await this.orderRepository.updateStatus(order._id as string, intiialStatus, undefined, undefined) // Gọi để lấy lại order
     await Order.findByIdAndUpdate(order._id, {
       $set: { orderDetails: orderDetailIds },
@@ -101,13 +103,12 @@ export default class OrderService {
         customerId,
         orderDetail: cartItem,
       });
-      console.log('paymentRes', paymentRes);
 
       const orderRes = await this.orderRepository.findOrderById(
         order._id as string,
       );
       // return { data: order, payment: paymentRes, message: "vui long thanh toan" };
-      console.log('orderRes', orderRes);
+      // console.log('orderRes', orderRes);
 
       return {
         data: orderRes,

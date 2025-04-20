@@ -26,6 +26,7 @@ const cors = require('cors');
 dotenv.config();
 import './config/passport/passport.config';
 import productAttributesRouter from './api/productAttibutes/router/productAttribute.router';
+import mongoose from 'mongoose';
 
 const app = express();
 app.use(

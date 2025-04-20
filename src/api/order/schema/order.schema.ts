@@ -1,4 +1,5 @@
 import { Schema, model, Document } from 'mongoose';
+import { IUser } from '../../users/dto/users.dto';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -23,6 +24,23 @@ export interface IOrder extends Document {
   createAt: Date;
   note?: string; // Assuming OrderDetail is another model, you can replace 'any' with the actual type
 }
+
+export interface IOrderWithCustomer extends IOrder {
+  customer:
+    | Omit<
+        IUser,
+        | 'password'
+        | 'role'
+        | 'avatar'
+        | '_id'
+        | 'createAt'
+        | 'updateAt'
+        | 'usersname'
+        | 'sex'
+      >
+    | 'email';
+}
+
 const orderSchema = new Schema<IOrder>({
   voucherId: { type: String, default: null },
   customerId: { type: String, required: true },

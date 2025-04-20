@@ -1,7 +1,14 @@
-import Order, { OrderStatus, IOrder } from '../schema/order.schema';
+import Order, {
+  OrderStatus,
+  IOrder,
+  IOrderWithCustomer,
+} from '../schema/order.schema';
 import OrderDetail, {
   IOrderDetail,
 } from '../../orderDetail/schema/orderDetail.schema';
+import { Users } from '../../users/schema/user.schema';
+import { IUser } from '../../users/dto/users.dto';
+import mongoose, { PipelineStage } from 'mongoose';
 
 export class OrderRepository {
   async createOrder(orderData: Partial<IOrder>): Promise<IOrder> {
@@ -15,8 +22,80 @@ export class OrderRepository {
     return await OrderDetail.insertMany(orderDetailData);
   }
 
-  async findOrderById(orderId: string): Promise<IOrder | null> {
-    return await Order.findById(orderId).populate('orderDetails');
+  async findOrderById(orderId: string): Promise<IOrderWithCustomer | null> {
+    const pipeline: PipelineStage[] = [
+      // Lọc Order theo _id
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(orderId),
+        },
+      },
+      // Nối với collection orderdetails
+      {
+        $lookup: {
+          from: 'orderdetails', // Tên collection trong MongoDB
+          localField: 'orderDetails', // Trường trong Order chứa _id của OrderDetail
+          foreignField: '_id', // Trường _id trong OrderDetail
+          as: 'orderDetails', // Tên mảng chứa kết quả
+        },
+      },
+      // Chỉ giữ các trường cần thiết trong orderDetails
+      {
+        $project: {
+          customerId: 1,
+          totalAmount: 1,
+          orderStatus: 1,
+          address: 1,
+          discountAmount: 1,
+          voucherId: 1,
+          paymentMethod: 1,
+          note: 1,
+          createAt: 1,
+          orderDetails: {
+            $map: {
+              input: '$orderDetails',
+              as: 'detail',
+              in: {
+                _id: '$$detail._id',
+                productVariantId: '$$detail.productVariantId',
+                quantity: '$$detail.quantity',
+                price: '$$detail.price',
+                subTotal: '$$detail.subTotal',
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    // Thực hiện aggregation
+    const [order] = await Order.aggregate(pipeline);
+    // console.log('Aggregated Order:', order);
+
+    if (!order) return null;
+
+    const user = await Users.findOne({ _id: order.customerId })
+      .select('fullname email phone address')
+      .lean();
+    if (!user) return null;
+
+    const customer: Omit<
+      IUser,
+      | 'password'
+      | 'role'
+      | 'avatar'
+      | '_id'
+      | 'createAt'
+      | 'updateAt'
+      | 'usersname'
+      | 'sex'
+    > = {
+      fullname: user.fullname,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+    };
+    return { ...order, customer } as unknown as IOrderWithCustomer;
   }
 
   async updateStatus(
