@@ -5,8 +5,14 @@ import {
 } from '../dto/productVariants.dto';
 
 export const ProductVariantsService = {
-  async getAllProductVariants() {
-    return await ProductVariantsRepository.getAllPrductVariants();
+  async getAllProductVariants({
+    skip,
+    limit,
+  }: {
+    skip: number;
+    limit: number;
+  }) {
+    return await ProductVariantsRepository.getAllPrductVariants(skip, limit);
   },
   async getProductVariantsByChildId(childId: string) {
     return await ProductVariantsRepository.getProductVariantsByChildId(childId);

@@ -1,14 +1,20 @@
 import { Request, Response } from 'express';
 import { ProductVariantsService } from '../service/productVariant.service';
-import { log } from 'util';
 
 export const ProductVariantController = {
   async getAllProductVariants(req: Request, res: Response) {
     try {
-      const productVariants =
-        await ProductVariantsService.getAllProductVariants();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 8;
+      const skip = (page - 1) * limit;
+
+      const { productVariants, total } =
+        await ProductVariantsService.getAllProductVariants({ skip, limit });
       res.status(200).json({
         data: productVariants,
+        page,
+        limit,
+        total,
         message: 'Lấy tất cả sản phẩm thành công',
         length: productVariants.length,
       });
