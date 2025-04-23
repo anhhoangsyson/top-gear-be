@@ -9,7 +9,7 @@ export class LocationController {
     this.locationService = new LocationService();
   }
 
-  async getLocations(req: Request, res: Response): Promise<void> {
+  async getLocationsByUserId(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user._id; // Giả sử middleware auth đã gắn user vào req
       const locations = await this.locationService.getLocationsByUserId(userId);
