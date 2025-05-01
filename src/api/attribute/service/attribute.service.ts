@@ -30,7 +30,11 @@ export class AttributeService {
   }
 
   // feature
-  // async disableAttributeById(id: string): Promise<IAttributeResponseDto | null> {
-  //     return this.a.disableAttributeById(id);
-  // }
+  async inActiveAttributeById(id: string) {
+    return this.a.inActiveAttributeById(id);
+  }
+
+  async activeAttributeById(id: string) {
+    return this.a.activeAttributeById(id);
+  }
 }

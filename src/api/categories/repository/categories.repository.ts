@@ -119,6 +119,8 @@ export class CategoriesRepository {
     });
   }
 
+  // get all parent category
+
   // Here for the CategoriesAttribute
 
   async addAttribute(
