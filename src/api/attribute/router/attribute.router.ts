@@ -20,4 +20,11 @@ attributeRouter.put('/:id', (req, res) => {
   attributeController.updateAttributeById(req, res);
 });
 
+attributeRouter.put('/active/:id', (req, res) => {
+  attributeController.activeAttributeById(req, res);
+});
+
+attributeRouter.put('/inactive/:id', (req, res) => {
+  attributeController.inActiveAttributeById(req, res);
+});
 export default attributeRouter;
