@@ -7,7 +7,9 @@ const attributeController = new AttributeController();
 attributeRouter.get('/', (req, res) => {
   attributeController.getAllAttributes(req, res);
 });
-
+attributeRouter.get('/getByCategoryId/:categoryId', (req, res) => {
+  attributeController.getAttributesByCategoryId(req, res);
+});
 attributeRouter.post('/', (req, res) => {
   attributeController.createAttribute(req, res);
 });
@@ -27,4 +29,5 @@ attributeRouter.put('/active/:id', (req, res) => {
 attributeRouter.put('/inactive/:id', (req, res) => {
   attributeController.inActiveAttributeById(req, res);
 });
+
 export default attributeRouter;

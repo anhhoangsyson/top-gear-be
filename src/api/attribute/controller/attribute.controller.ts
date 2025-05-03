@@ -83,4 +83,18 @@ export class AttributeController {
       res.status(500).json({ message: 'Lỗi máy chủ nội bộ', error });
     }
   }
+
+  async getAttributesByCategoryId(req: Request, res: Response): Promise<void> {
+    try {
+      const categoryId = req.params.categoryId;
+      const attributes =
+        await attibuteService.getAttributesByCategoryId(categoryId);
+      res.status(200).json({
+        data: attributes,
+        message: 'Lấy thuộc tính theo ID danh mục thành công',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Lỗi máy chủ nội bộ', error });
+    }
+  }
 }

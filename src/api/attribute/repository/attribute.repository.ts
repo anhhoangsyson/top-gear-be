@@ -79,4 +79,35 @@ export class AttributeRepository {
       { new: true },
     );
   }
+
+  async getAttributesByCategoryId(categoryId: string) {
+    try {
+      console.log('categoryId:', categoryId);
+
+      const categoryAttributes = await CategoryAttribute.find({
+        categoryId: new mongoose.Types.ObjectId(categoryId),
+      })
+        .select('attributeId')
+        .lean();
+      console.log('categoryAttributes:', categoryAttributes);
+
+      const attributeIds = categoryAttributes.map((ca) => ca.attributeId);
+      console.log('attributeIds:', attributeIds);
+
+      const attributes = await Attribute.find({
+        _id: { $in: attributeIds },
+      }).lean();
+      console.log('attributes:', attributes);
+
+      return attributes.map((attribute) => ({
+        ...attribute,
+        categoryIds: categoryAttributes
+          .filter((ca) => ca.attributeId === attribute._id)
+          .map((ca) => ca.categoryId.toString()),
+      }));
+    } catch (error) {
+      console.error('Error in getAttributesByCategoryId:', error);
+      throw error; // Đảm bảo lỗi được trả về để client biết
+    }
+  }
 }
