@@ -37,4 +37,8 @@ export class AttributeService {
   async activeAttributeById(id: string) {
     return this.a.activeAttributeById(id);
   }
+
+  async getAttributesByCategoryId(categoryId: string) {
+    return this.a.getAttributesByCategoryId(categoryId);
+  }
 }
