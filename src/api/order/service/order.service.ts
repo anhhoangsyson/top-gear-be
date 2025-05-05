@@ -135,4 +135,26 @@ export default class OrderService {
     }
     return orders;
   }
+
+  async cancelingOrder(id: string) {
+    return await this.orderRepository.cancelingOrder(id);
+  }
+
+  async canceledOrder(id: string) {
+    return await this.orderRepository.canceledOrder(id);
+  }
+
+  async compeletedOrder(id: string) {
+    return await this.orderRepository.compeleteOrder(id);
+  }
+
+  async getAllOrders() {
+    const orders = await this.orderRepository.getAllOrders();
+    if (orders.length === 0) {
+      return {
+        message: 'Không có đơn hàng nào',
+      };
+    }
+    return orders;
+  }
 }

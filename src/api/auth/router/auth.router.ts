@@ -22,4 +22,8 @@ authRouter.get('/me', authenticateJWT, (req, res) => {
   controller.me(req, res);
 });
 
+authRouter.put('/me/edit', authenticateJWT, (req, res) => {
+  controller.editAccount(req, res);
+});
+
 export default authRouter;

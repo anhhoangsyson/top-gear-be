@@ -97,12 +97,10 @@ export class authController {
       const user = req.user;
 
       if (!user) {
-        res
-          .status(401)
-          .json({
-            message:
-              'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.',
-          });
+        res.status(401).json({
+          message:
+            'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.',
+        });
         return;
       }
 
@@ -124,6 +122,38 @@ export class authController {
       res
         .status(500)
         .json({ message: error.message || 'Internal server error' });
+    }
+  }
+
+  async editAccount(req: Request, res: Response) {
+    try {
+      const user = req.user;
+      const { usersname } = req.body;
+
+      if (!user) {
+        res.status(401).json({
+          message:
+            'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.',
+        });
+        return;
+      }
+
+      const userData = await Users.findByIdAndUpdate(
+        { _id: user._id },
+        { ...req.body },
+        { new: true },
+      ).select('-password -_id');
+      if (!userData) {
+        res.status(404).json({ message: 'Người dùng không tồn tại' });
+        return;
+      }
+      return res.status(200).json({
+        data: userData,
+        status: 200,
+        message: 'Cập nhật thông tin người dùng thành công',
+      });
+    } catch (error: any) {
+      console.log(error);
     }
   }
 }

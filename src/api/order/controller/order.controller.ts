@@ -84,4 +84,89 @@ export default class OrderController {
       });
     }
   }
+
+  async cancelingOrder(req: Request, res: Response) {
+    const orderId = req.params.id;
+    try {
+      const order = await this.orderService.cancelingOrder(orderId);
+      if (!order) {
+        return res.status(404).json({
+          message: 'Order not found',
+        });
+      }
+      res.status(200).json({
+        data: order,
+        message: 'Order canceled successfully',
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
+
+  async canceledOrder(req: Request, res: Response) {
+    const orderId = req.params.id;
+    try {
+      const order = await this.orderService.canceledOrder(orderId);
+      if (!order) {
+        return res.status(404).json({
+          message: 'Order not found',
+        });
+      }
+      res.status(200).json({
+        data: order,
+        message: 'Order canceled successfully',
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
+
+  async compeleteOrder(req: Request, res: Response) {
+    const orderId = req.params.id;
+    try {
+      const order = await this.orderService.compeletedOrder(orderId);
+      if (!order) {
+        return res.status(404).json({
+          message: 'Order not found',
+        });
+      }
+      res.status(200).json({
+        data: order,
+        message: 'Order completed successfully',
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
+
+  async getAllOrders(req: Request, res: Response) {
+    try {
+      const order = await this.orderService.getAllOrders();
+
+      if (!order) {
+        return res.status(404).json({
+          message: 'Order not found',
+        });
+      }
+
+      res.status(200).json({
+        data: order,
+        message: 'Order retrieved successfully',
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
 }

@@ -128,4 +128,125 @@ export class OrderRepository {
   async getMyOrders(customerId: string) {
     return await Order.find({ customerId: customerId });
   }
+
+  async cancelingOrder(id: string) {
+    const order = await Order.findById(id);
+
+    if (order?.orderStatus === OrderStatus.COMPLETED) {
+      return {
+        message: 'Đơn hàng đã hoàn thành, không thể hủy',
+      };
+    }
+
+    return await Order.findByIdAndUpdate(
+      id,
+      { orderStatus: OrderStatus.PAYMENT_CANCELING },
+      { new: true },
+    );
+  }
+
+  async canceledOrder(id: string) {
+    const order = await Order.findById(id);
+    if (order?.orderStatus === OrderStatus.PAYMENT_CANCELING) {
+      return await Order.findByIdAndUpdate(
+        id,
+        { orderStatus: OrderStatus.CANCELLED },
+        { new: true },
+      );
+    }
+  }
+
+  async compeleteOrder(id: string) {
+    const order = await Order.findById(id);
+
+    if (order?.orderStatus === OrderStatus.PAYMENT_SUCCESS) {
+      return await Order.findByIdAndUpdate(
+        id,
+        { orderStatus: OrderStatus.COMPLETED },
+        { new: true },
+      );
+    } else {
+      return {
+        message: 'Đơn hàng chưa thanh toán thành công',
+      };
+    }
+  }
+
+  async getAllOrders() {
+    const pipeline: PipelineStage[] = [
+      // Chuyển đổi customerId từ string sang ObjectId nếu hợp lệ
+      {
+        $addFields: {
+          customerId: {
+            $cond: {
+              if: {
+                $regexMatch: {
+                  input: '$customerId',
+                  regex: /^[a-fA-F0-9]{24}$/,
+                },
+              }, // Kiểm tra hợp lệ
+              then: { $toObjectId: '$customerId' }, // Chuyển đổi nếu hợp lệ
+              else: null, // Gán null nếu không hợp lệ
+            },
+          },
+        },
+      },
+      // Nối với collection orderdetails
+      {
+        $lookup: {
+          from: 'orderdetails',
+          localField: 'orderDetails',
+          foreignField: '_id',
+          as: 'orderDetails',
+        },
+      },
+      // Nối với collection users
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'customerId',
+          foreignField: '_id',
+          as: 'customer',
+        },
+      },
+      // Giải nén mảng customer thành object
+      {
+        $unwind: {
+          path: '$customer',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // Chỉ giữ các trường cần thiết
+      {
+        $project: {
+          customerId: 1,
+          totalAmount: 1,
+          orderStatus: 1,
+          address: 1,
+          discountAmount: 1,
+          voucherId: 1,
+          paymentMethod: 1,
+          note: 1,
+          createAt: 1,
+          'customer.fullname': 1,
+          'customer.phone': 1,
+          orderDetails: {
+            $map: {
+              input: '$orderDetails',
+              as: 'detail',
+              in: {
+                _id: '$$detail._id',
+                productVariantId: '$$detail.productVariantId',
+                quantity: '$$detail.quantity',
+                price: '$$detail.price',
+                subTotal: '$$detail.subTotal',
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    return await Order.aggregate(pipeline);
+  }
 }

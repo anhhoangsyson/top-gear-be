@@ -27,4 +27,16 @@ export class LocationService {
     });
     return new LocationDTO(newLocation);
   }
+
+  async deleteLocation(id: string): Promise<void> {
+    await this.locationRepository.deleteById(id);
+  }
+
+  async setDefaultLocation(id: string): Promise<void> {
+    await this.locationRepository.setDefaultLocation(id);
+  }
+
+  async updateLocation(id: string, locationData: Partial<CreateLocationDTO>) {
+    await this.locationRepository.updateLocation(id, locationData);
+  }
 }

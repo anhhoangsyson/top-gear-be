@@ -6,6 +6,11 @@ import { PaymentController } from '../controller/payment.controller';
 const orderRouter = Router();
 const orderController = new OrderController();
 const paymentController = new PaymentController();
+
+orderRouter.get('/all', (req, res) => {
+  orderController.getAllOrders(req, res);
+});
+
 orderRouter.post('/', authenticateJWT, (req, res) => {
   orderController.createOrder(req, res);
 });
@@ -24,6 +29,18 @@ orderRouter.get('/my', authenticateJWT, (req, res) => {
 
 orderRouter.get('/:id', authenticateJWT, (req, res) => {
   orderController.getOrderById(req, res);
+});
+
+orderRouter.put('/canceling-order/:id', authenticateJWT, (req, res) => {
+  orderController.cancelingOrder(req, res);
+});
+
+orderRouter.put('/canceled-order/:id', (req, res) => {
+  orderController.canceledOrder(req, res);
+});
+
+orderRouter.put('/compelete-order/:id', (req, res) => {
+  orderController.compeleteOrder(req, res);
 });
 
 export default orderRouter;

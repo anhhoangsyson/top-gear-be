@@ -9,4 +9,26 @@ export class LocationRepository {
     const location = new Location(locationData);
     return await location.save();
   }
+
+  async deleteById(id: string) {
+    return Location.findByIdAndDelete(id).exec();
+  }
+
+  async setDefaultLocation(id: string) {
+    const currentDefaultLocation = await Location.findOne({
+      isDefault: true,
+    }).exec();
+
+    if (currentDefaultLocation) {
+      return Location.findByIdAndUpdate(
+        id,
+        { isDefault: true },
+        { new: true },
+      ).exec();
+    }
+  }
+
+  async updateLocation(id: string, locationdata: Partial<ILocation>) {
+    return Location.findByIdAndUpdate(id, locationdata, { new: true }).exec();
+  }
 }
