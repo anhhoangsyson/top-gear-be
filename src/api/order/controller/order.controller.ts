@@ -169,4 +169,50 @@ export default class OrderController {
       });
     }
   }
+
+  async changeOrderStatus(req: Request, res: Response) {
+    const orderId = req.params.id;
+    const status = req.body.status;
+    try {
+      const orderStatus = await this.orderRepository.changeOrderStatus(
+        status,
+        orderId,
+      );
+      if (!orderStatus) {
+        return res.status(404).json({
+          message: 'Order not found',
+        });
+      }
+      res.status(200).json({
+        data: orderStatus,
+        message: 'Order status changed successfully',
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
+
+  async getOrderDetailsById(req: Request, res: Response) {
+    const orderId = req.params.id;
+    try {
+      const orderDetails = await this.orderService.getOrderDetailsById(orderId);
+      if (!orderDetails) {
+        return res.status(404).json({
+          message: 'Order not found',
+        });
+      }
+      res.status(200).json({
+        data: orderDetails,
+        message: 'Order details retrieved successfully',
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: (error as Error)?.message,
+      });
+    }
+  }
 }

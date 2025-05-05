@@ -148,6 +148,10 @@ export default class OrderService {
     return await this.orderRepository.compeleteOrder(id);
   }
 
+  async changeOrderStatus(status: string, id: string) {
+    return await this.orderRepository.changeOrderStatus(status, id);
+  }
+
   async getAllOrders() {
     const orders = await this.orderRepository.getAllOrders();
     if (orders.length === 0) {
@@ -157,4 +161,8 @@ export default class OrderService {
     }
     return orders;
   }
+
+  getOrderDetailsById = async (orderId: string) => {
+    return await this.orderRepository.getOrderDetailById(orderId);
+  };
 }

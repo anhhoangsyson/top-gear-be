@@ -43,4 +43,11 @@ orderRouter.put('/compelete-order/:id', (req, res) => {
   orderController.compeleteOrder(req, res);
 });
 
+orderRouter.patch('/change-order-status/:id', (req, res) => {
+  orderController.changeOrderStatus(req, res);
+});
+
+orderRouter.get('/orderDetail/:id', (req, res) => {
+  orderController.getOrderDetailsById(req, res);
+});
 export default orderRouter;

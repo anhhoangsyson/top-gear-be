@@ -145,6 +145,20 @@ export class OrderRepository {
     );
   }
 
+  async changeOrderStatus(status: string, id: string) {
+    return await Order.findByIdAndUpdate(
+      {
+        _id: id,
+      },
+      {
+        orderStatus: status,
+      },
+      {
+        new: true,
+      },
+    );
+  }
+
   async canceledOrder(id: string) {
     const order = await Order.findById(id);
     if (order?.orderStatus === OrderStatus.PAYMENT_CANCELING) {
@@ -240,6 +254,233 @@ export class OrderRepository {
                 quantity: '$$detail.quantity',
                 price: '$$detail.price',
                 subTotal: '$$detail.subTotal',
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    return await Order.aggregate(pipeline);
+  }
+
+  // async getAllOrders() {
+  //   const pipeline: PipelineStage[] = [
+  //     // Chuyển đổi customerId từ string sang ObjectId nếu hợp lệ
+  //     {
+  //       $addFields: {
+  //         customerId: {
+  //           $cond: {
+  //             if: { $regexMatch: { input: '$customerId', regex: /^[a-fA-F0-9]{24}$/ } },
+  //             then: { $toObjectId: '$customerId' },
+  //             else: null,
+  //           },
+  //         },
+  //       },
+  //     },
+  //     // Nối với collection orderdetails
+  //     {
+  //       $lookup: {
+  //         from: 'orderdetails',
+  //         localField: 'orderDetails',
+  //         foreignField: '_id',
+  //         as: 'orderDetails',
+  //       },
+  //     },
+  //     // Chuyển đổi productVariantId trong orderDetails sang ObjectId nếu cần
+  //     {
+  //       $addFields: {
+  //         'orderDetails.productVariantId': {
+  //           $map: {
+  //             input: '$orderDetails',
+  //             as: 'detail',
+  //             in: {
+  //               $cond: {
+  //                 if: { $regexMatch: { input: '$$detail.productVariantId', regex: /^[a-fA-F0-9]{24}$/ } },
+  //                 then: { $toObjectId: '$$detail.productVariantId' },
+  //                 else: '$$detail.productVariantId',
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //     // Nối với collection productImages để lấy ảnh của biến thể sản phẩm
+  //     {
+  //       $lookup: {
+  //         from: 'productimage',
+  //         localField: 'orderDetails.productVariantId',
+  //         foreignField: '_id',
+  //         as: 'productImages',
+  //       },
+  //     },
+  //     // Nối với collection users để lấy thông tin khách hàng
+  //     {
+  //       $lookup: {
+  //         from: 'users',
+  //         localField: 'customerId',
+  //         foreignField: '_id',
+  //         as: 'customer',
+  //       },
+  //     },
+  //     // Giải nén mảng customer thành object
+  //     {
+  //       $unwind: {
+  //         path: '$customer',
+  //         preserveNullAndEmptyArrays: true,
+  //       },
+  //     },
+  //     // Chỉ giữ các trường cần thiết
+  //     {
+  //       $project: {
+  //         customerId: 1,
+  //         totalAmount: 1,
+  //         orderStatus: 1,
+  //         address: 1,
+  //         discountAmount: 1,
+  //         voucherId: 1,
+  //         paymentMethod: 1,
+  //         note: 1,
+  //         createAt: 1,
+  //         'customer.fullname': 1,
+  //         'customer.phone': 1,
+  //         orderDetails: {
+  //           $map: {
+  //             input: '$orderDetails',
+  //             as: 'detail',
+  //             in: {
+  //               _id: '$$detail._id',
+  //               productVariantId: '$$detail.productVariantId',
+  //               quantity: '$$detail.quantity',
+  //               price: '$$detail.price',
+  //               subTotal: '$$detail.subTotal',
+  //               variantImage: { $arrayElemAt: ['$productImages.url', 0] }, // Ảnh đầu tiên của biến thể sản phẩm
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   ];
+
+  //   return await Order.aggregate(pipeline);
+  // }
+
+  async getOrderDetailById(id: string) {
+    const pipeline: PipelineStage[] = [
+      // Lọc Order theo _id
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(id),
+        },
+      },
+      // Nối với collection orderdetails
+      {
+        $lookup: {
+          from: 'orderdetails',
+          localField: 'orderDetails',
+          foreignField: '_id',
+          as: 'orderDetails',
+        },
+      },
+      // Chuyển đổi productVariantId sang ObjectId nếu cần
+      {
+        $addFields: {
+          'orderDetails.productVariantId': {
+            $map: {
+              input: '$orderDetails',
+              as: 'detail',
+              in: {
+                $cond: {
+                  if: {
+                    $regexMatch: {
+                      input: '$$detail.productVariantId',
+                      regex: /^[a-fA-F0-9]{24}$/,
+                    },
+                  },
+                  then: { $toObjectId: '$$detail.productVariantId' },
+                  else: '$$detail.productVariantId',
+                },
+              },
+            },
+          },
+        },
+      },
+      // Nối với collection productVariants
+      {
+        $lookup: {
+          from: 'productvariants',
+          localField: 'orderDetails.productVariantId',
+          foreignField: '_id',
+          as: 'productVariants',
+        },
+      },
+      // Nối với collection productImages để lấy ảnh sản phẩm
+      {
+        $lookup: {
+          from: 'productimages',
+          localField: 'productVariants.imageId',
+          foreignField: '_id',
+          as: 'productImages',
+        },
+      },
+      // Nối với collection products để lấy thông tin sản phẩm
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productVariants.productId',
+          foreignField: '_id',
+          as: 'products',
+        },
+      },
+      // Nối với collection users để lấy thông tin khách hàng
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'customerId',
+          foreignField: '_id',
+          as: 'customer',
+        },
+      },
+      // Giải nén mảng customer thành object
+      {
+        $unwind: {
+          path: '$customer',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // Chỉ giữ các trường cần thiết
+      {
+        $project: {
+          customerId: 1,
+          totalAmount: 1,
+          orderStatus: 1,
+          address: 1,
+          discountAmount: 1,
+          voucherId: 1,
+          paymentMethod: 1,
+          note: 1,
+          createAt: 1,
+          'customer.fullname': 1,
+          'customer.phone': 1,
+          'customer.email': 1,
+          'customer.address': 1,
+          orderDetails: {
+            $map: {
+              input: '$orderDetails',
+              as: 'detail',
+              in: {
+                _id: '$$detail._id',
+                productVariantId: '$$detail.productVariantId',
+                quantity: '$$detail.quantity',
+                price: '$$detail.price',
+                subTotal: '$$detail.subTotal',
+                product: {
+                  name: { $arrayElemAt: ['$products.name', 0] }, // Tên sản phẩm
+                  variantImage: { $arrayElemAt: ['$productImages.url', 0] }, // Ảnh của biến thể sản phẩm
+                  price: {
+                    $arrayElemAt: ['$productVariants.variantPriceSale', 0],
+                  }, // Giá của biến thể sản phẩm
+                },
               },
             },
           },
