@@ -57,4 +57,44 @@ export class AttributeController {
       res.status(500).json({ message: 'Lỗi máy chủ nội bộ', error });
     }
   }
+
+  async activeAttributeById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const attribute = await attibuteService.activeAttributeById(id);
+      res.status(200).json({
+        data: attribute,
+        message: 'Kích hoạt thuộc tính thành công',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Lỗi máy chủ nội bộ', error });
+    }
+  }
+
+  async inActiveAttributeById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const attribute = await attibuteService.inActiveAttributeById(id);
+      res.status(200).json({
+        data: attribute,
+        message: 'Vô hiệu hóa thuộc tính thành công',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Lỗi máy chủ nội bộ', error });
+    }
+  }
+
+  async getAttributesByCategoryId(req: Request, res: Response): Promise<void> {
+    try {
+      const categoryId = req.params.categoryId;
+      const attributes =
+        await attibuteService.getAttributesByCategoryId(categoryId);
+      res.status(200).json({
+        data: attributes,
+        message: 'Lấy thuộc tính theo ID danh mục thành công',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Lỗi máy chủ nội bộ', error });
+    }
+  }
 }

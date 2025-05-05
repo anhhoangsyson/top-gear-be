@@ -7,8 +7,8 @@ import {
 import { StatusProductVariant } from '../../../constants/status/status.constant';
 
 export const ProductVariantsRepository = {
-  async getAllPrductVariants() {
-    return await ProductVariants.aggregate([
+  async getAllPrductVariants(skip: number, limit: number) {
+    const productVariants = await ProductVariants.aggregate([
       {
         $lookup: {
           from: 'productimages',
@@ -27,7 +27,12 @@ export const ProductVariantsRepository = {
           images: { $first: '$images' },
         },
       },
+      { $skip: skip },
+      { $limit: limit },
     ]);
+
+    const total = await ProductVariants.countDocuments();
+    return { productVariants, total };
   },
 
   async getProductVariantsByChildId(childId: string) {

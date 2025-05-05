@@ -6,7 +6,7 @@ const locationRouter = Router();
 const locationController = new LocationController();
 
 locationRouter.get('/', authenticateJWT, (req, res) => {
-  locationController.getLocations(req, res);
+  locationController.getLocationsByUserId(req, res);
 });
 
 locationRouter.post('/', authenticateJWT, (req, res) => {
