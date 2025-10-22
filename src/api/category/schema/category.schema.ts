@@ -1,23 +1,70 @@
-import { z } from 'zod';
+import mongoose, { Document, Schema, Model } from 'mongoose';
 
-export const createCategorySchema = z.object({
-  categoryName: z
-    .string()
-    .min(2, 'Category name must be at least 2 characters'),
+export interface ICategory extends Document {
+  name: string;
+  description?: string;
+  slug: string;
+  parentId?: mongoose.Types.ObjectId | null;
+  image?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const categorySchema = new Schema<ICategory>(
+  {
+    name: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    description: {
+      type: String,
+    },
+    slug: {
+      type: String,
+      unique: true,
+    },
+    parentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Category',
+      default: null,
+    },
+    image: {
+      type: String,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    sortOrder: {
+      type: Number,
+      default: 0,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+// Tạo slug trước khi lưu
+categorySchema.pre('save', function (next) {
+  if (!this.slug) {
+    this.slug = this.name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  next();
 });
 
-export const updateCategorySchema = z.object({
-  categoryName: z
-    .string()
-    .min(2, 'Category name must be at least 2 characters')
-    .optional(),
-  isDeleted: z.boolean().optional(),
-});
+const Category: Model<ICategory> = mongoose.model<ICategory>(
+  'Category',
+  categorySchema,
+);
 
-export const categoryIdSchema = z.object({
-  categoryId: z.string().uuid('Invalid category ID format'),
-});
-
-export const addCategoryAttributeSchema = z.object({
-  attributeId: z.string().uuid('Invalid attribute ID format'),
-});
+export default Category;

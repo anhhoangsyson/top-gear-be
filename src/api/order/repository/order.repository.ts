@@ -5,6 +5,7 @@ import Order, {
 } from '../schema/order.schema';
 import OrderDetail, {
   IOrderDetail,
+  IOrderDetailResponse,
 } from '../../orderDetail/schema/orderDetail.schema';
 import { Users } from '../../users/schema/user.schema';
 import { IUser } from '../../users/dto/users.dto';
@@ -18,28 +19,52 @@ export class OrderRepository {
 
   async createOrderDetail(
     orderDetailData: IOrderDetail[],
-  ): Promise<IOrderDetail[]> {
+  ): Promise<IOrderDetailResponse[]> {
     return await OrderDetail.insertMany(orderDetailData);
   }
 
   async findOrderById(orderId: string): Promise<IOrderWithCustomer | null> {
     const pipeline: PipelineStage[] = [
-      // Lọc Order theo _id
+      { $match: { _id: new mongoose.Types.ObjectId(orderId) } },
       {
-        $match: {
-          _id: new mongoose.Types.ObjectId(orderId),
+        $addFields: {
+          customerId: {
+            $cond: [
+              { $eq: [{ $type: '$customerId' }, 'string'] },
+              { $toObjectId: '$customerId' },
+              '$customerId',
+            ],
+          },
         },
       },
-      // Nối với collection orderdetails
+      // Join orderdetails
       {
         $lookup: {
-          from: 'orderdetails', // Tên collection trong MongoDB
-          localField: 'orderDetails', // Trường trong Order chứa _id của OrderDetail
-          foreignField: '_id', // Trường _id trong OrderDetail
-          as: 'orderDetails', // Tên mảng chứa kết quả
+          from: 'orderdetails',
+          localField: 'orderDetails',
+          foreignField: '_id',
+          as: 'orderDetails',
         },
       },
-      // Chỉ giữ các trường cần thiết trong orderDetails
+      // Join laptops
+      {
+        $lookup: {
+          from: 'laptops',
+          localField: 'orderDetails.laptopId',
+          foreignField: '_id',
+          as: 'laptopDetails',
+        },
+      },
+      // Join users
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'customerId',
+          foreignField: '_id',
+          as: 'customer',
+        },
+      },
+      { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
       {
         $project: {
           customerId: 1,
@@ -51,16 +76,84 @@ export class OrderRepository {
           paymentMethod: 1,
           note: 1,
           createAt: 1,
+          customer: {
+            fullname: '$customer.fullname',
+            phone: '$customer.phone',
+            email: '$customer.email',
+            address: '$customer.address',
+          },
           orderDetails: {
             $map: {
               input: '$orderDetails',
               as: 'detail',
               in: {
                 _id: '$$detail._id',
-                productVariantId: '$$detail.productVariantId',
+                laptopId: '$$detail.laptopId',
                 quantity: '$$detail.quantity',
                 price: '$$detail.price',
                 subTotal: '$$detail.subTotal',
+                name: {
+                  $let: {
+                    vars: {
+                      laptop: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$laptopDetails',
+                              as: 'l',
+                              cond: { $eq: ['$$l._id', '$$detail.laptopId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: '$$laptop.name',
+                  },
+                },
+                slug: {
+                  $let: {
+                    vars: {
+                      laptop: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$laptopDetails',
+                              as: 'l',
+                              cond: { $eq: ['$$l._id', '$$detail.laptopId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: '$$laptop.slug',
+                  },
+                },
+                images: {
+                  $filter: {
+                    input: {
+                      $arrayElemAt: [
+                        {
+                          $map: {
+                            input: {
+                              $filter: {
+                                input: '$laptopDetails',
+                                as: 'l',
+                                cond: { $eq: ['$$l._id', '$$detail.laptopId'] },
+                              },
+                            },
+                            as: 'laptop',
+                            in: '$$laptop.images',
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                    as: 'img',
+                    cond: { $eq: ['$$img.isPrimary', true] },
+                  },
+                },
               },
             },
           },
@@ -68,34 +161,11 @@ export class OrderRepository {
       },
     ];
 
-    // Thực hiện aggregation
     const [order] = await Order.aggregate(pipeline);
-    // console.log('Aggregated Order:', order);
-
     if (!order) return null;
 
-    const user = await Users.findOne({ _id: order.customerId })
-      .select('fullname email phone address')
-      .lean();
-    if (!user) return null;
-
-    const customer: Omit<
-      IUser,
-      | 'password'
-      | 'role'
-      | 'avatar'
-      | '_id'
-      | 'createAt'
-      | 'updateAt'
-      | 'usersname'
-      | 'sex'
-    > = {
-      fullname: user.fullname,
-      email: user.email,
-      phone: user.phone,
-      address: user.address,
-    };
-    return { ...order, customer } as unknown as IOrderWithCustomer;
+    // Lấy thông tin user như cũ nếu cần
+    return order as unknown as IOrderWithCustomer;
   }
 
   async updateStatus(
@@ -186,84 +256,6 @@ export class OrderRepository {
     }
   }
 
-  async getAllOrders() {
-    const pipeline: PipelineStage[] = [
-      // Chuyển đổi customerId từ string sang ObjectId nếu hợp lệ
-      {
-        $addFields: {
-          customerId: {
-            $cond: {
-              if: {
-                $regexMatch: {
-                  input: '$customerId',
-                  regex: /^[a-fA-F0-9]{24}$/,
-                },
-              }, // Kiểm tra hợp lệ
-              then: { $toObjectId: '$customerId' }, // Chuyển đổi nếu hợp lệ
-              else: null, // Gán null nếu không hợp lệ
-            },
-          },
-        },
-      },
-      // Nối với collection orderdetails
-      {
-        $lookup: {
-          from: 'orderdetails',
-          localField: 'orderDetails',
-          foreignField: '_id',
-          as: 'orderDetails',
-        },
-      },
-      // Nối với collection users
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'customerId',
-          foreignField: '_id',
-          as: 'customer',
-        },
-      },
-      // Giải nén mảng customer thành object
-      {
-        $unwind: {
-          path: '$customer',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      // Chỉ giữ các trường cần thiết
-      {
-        $project: {
-          customerId: 1,
-          totalAmount: 1,
-          orderStatus: 1,
-          address: 1,
-          discountAmount: 1,
-          voucherId: 1,
-          paymentMethod: 1,
-          note: 1,
-          createAt: 1,
-          'customer.fullname': 1,
-          'customer.phone': 1,
-          orderDetails: {
-            $map: {
-              input: '$orderDetails',
-              as: 'detail',
-              in: {
-                _id: '$$detail._id',
-                productVariantId: '$$detail.productVariantId',
-                quantity: '$$detail.quantity',
-                price: '$$detail.price',
-                subTotal: '$$detail.subTotal',
-              },
-            },
-          },
-        },
-      },
-    ];
-
-    return await Order.aggregate(pipeline);
-  }
-
   // async getAllOrders() {
   //   const pipeline: PipelineStage[] = [
   //     // Chuyển đổi customerId từ string sang ObjectId nếu hợp lệ
@@ -271,9 +263,14 @@ export class OrderRepository {
   //       $addFields: {
   //         customerId: {
   //           $cond: {
-  //             if: { $regexMatch: { input: '$customerId', regex: /^[a-fA-F0-9]{24}$/ } },
-  //             then: { $toObjectId: '$customerId' },
-  //             else: null,
+  //             if: {
+  //               $regexMatch: {
+  //                 input: '$customerId',
+  //                 regex: /^[a-fA-F0-9]{24}$/,
+  //               },
+  //             }, // Kiểm tra hợp lệ
+  //             then: { $toObjectId: '$customerId' }, // Chuyển đổi nếu hợp lệ
+  //             else: null, // Gán null nếu không hợp lệ
   //           },
   //         },
   //       },
@@ -287,34 +284,7 @@ export class OrderRepository {
   //         as: 'orderDetails',
   //       },
   //     },
-  //     // Chuyển đổi productVariantId trong orderDetails sang ObjectId nếu cần
-  //     {
-  //       $addFields: {
-  //         'orderDetails.productVariantId': {
-  //           $map: {
-  //             input: '$orderDetails',
-  //             as: 'detail',
-  //             in: {
-  //               $cond: {
-  //                 if: { $regexMatch: { input: '$$detail.productVariantId', regex: /^[a-fA-F0-9]{24}$/ } },
-  //                 then: { $toObjectId: '$$detail.productVariantId' },
-  //                 else: '$$detail.productVariantId',
-  //               },
-  //             },
-  //           },
-  //         },
-  //       },
-  //     },
-  //     // Nối với collection productImages để lấy ảnh của biến thể sản phẩm
-  //     {
-  //       $lookup: {
-  //         from: 'productimage',
-  //         localField: 'orderDetails.productVariantId',
-  //         foreignField: '_id',
-  //         as: 'productImages',
-  //       },
-  //     },
-  //     // Nối với collection users để lấy thông tin khách hàng
+  //     // Nối với collection users
   //     {
   //       $lookup: {
   //         from: 'users',
@@ -341,7 +311,7 @@ export class OrderRepository {
   //         voucherId: 1,
   //         paymentMethod: 1,
   //         note: 1,
-  //         createAt: 1,
+  //         createdAt: 1,
   //         'customer.fullname': 1,
   //         'customer.phone': 1,
   //         orderDetails: {
@@ -354,7 +324,6 @@ export class OrderRepository {
   //               quantity: '$$detail.quantity',
   //               price: '$$detail.price',
   //               subTotal: '$$detail.subTotal',
-  //               variantImage: { $arrayElemAt: ['$productImages.url', 0] }, // Ảnh đầu tiên của biến thể sản phẩm
   //             },
   //           },
   //         },
@@ -365,15 +334,8 @@ export class OrderRepository {
   //   return await Order.aggregate(pipeline);
   // }
 
-  async getOrderDetailById(id: string) {
-    const pipeline: PipelineStage[] = [
-      // Lọc Order theo _id
-      {
-        $match: {
-          _id: new mongoose.Types.ObjectId(id),
-        },
-      },
-      // Nối với collection orderdetails
+  async getAllOrders() {
+    const pipeline: mongoose.PipelineStage[] = [
       {
         $lookup: {
           from: 'orderdetails',
@@ -382,75 +344,37 @@ export class OrderRepository {
           as: 'orderDetails',
         },
       },
-      // Chuyển đổi productVariantId sang ObjectId nếu cần
+      {
+        $lookup: {
+          from: 'laptops',
+          localField: 'orderDetails.laptopId',
+          foreignField: '_id',
+          as: 'laptopDetails',
+        },
+      },
       {
         $addFields: {
-          'orderDetails.productVariantId': {
-            $map: {
-              input: '$orderDetails',
-              as: 'detail',
-              in: {
-                $cond: {
-                  if: {
-                    $regexMatch: {
-                      input: '$$detail.productVariantId',
-                      regex: /^[a-fA-F0-9]{24}$/,
-                    },
-                  },
-                  then: { $toObjectId: '$$detail.productVariantId' },
-                  else: '$$detail.productVariantId',
-                },
-              },
-            },
+          customerIdObj: {
+            $cond: [
+              { $eq: [{ $type: '$customerId' }, 'string'] },
+              { $toObjectId: '$customerId' },
+              '$customerId',
+            ],
           },
         },
       },
-      // Nối với collection productVariants
-      {
-        $lookup: {
-          from: 'productvariants',
-          localField: 'orderDetails.productVariantId',
-          foreignField: '_id',
-          as: 'productVariants',
-        },
-      },
-      // Nối với collection productImages để lấy ảnh sản phẩm
-      {
-        $lookup: {
-          from: 'productimages',
-          localField: 'productVariants.imageId',
-          foreignField: '_id',
-          as: 'productImages',
-        },
-      },
-      // Nối với collection products để lấy thông tin sản phẩm
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'productVariants.productId',
-          foreignField: '_id',
-          as: 'products',
-        },
-      },
-      // Nối với collection users để lấy thông tin khách hàng
       {
         $lookup: {
           from: 'users',
-          localField: 'customerId',
+          localField: 'customerIdObj',
           foreignField: '_id',
-          as: 'customer',
+          as: 'user',
         },
       },
-      // Giải nén mảng customer thành object
-      {
-        $unwind: {
-          path: '$customer',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      // Chỉ giữ các trường cần thiết
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
       {
         $project: {
+          _id: 1,
           customerId: 1,
           totalAmount: 1,
           orderStatus: 1,
@@ -459,35 +383,156 @@ export class OrderRepository {
           voucherId: 1,
           paymentMethod: 1,
           note: 1,
-          createAt: 1,
-          'customer.fullname': 1,
-          'customer.phone': 1,
-          'customer.email': 1,
-          'customer.address': 1,
+          createdAt: 1,
           orderDetails: {
             $map: {
               input: '$orderDetails',
               as: 'detail',
               in: {
                 _id: '$$detail._id',
-                productVariantId: '$$detail.productVariantId',
+                laptopId: '$$detail.laptopId',
                 quantity: '$$detail.quantity',
                 price: '$$detail.price',
                 subTotal: '$$detail.subTotal',
-                product: {
-                  name: { $arrayElemAt: ['$products.name', 0] }, // Tên sản phẩm
-                  variantImage: { $arrayElemAt: ['$productImages.url', 0] }, // Ảnh của biến thể sản phẩm
-                  price: {
-                    $arrayElemAt: ['$productVariants.variantPriceSale', 0],
-                  }, // Giá của biến thể sản phẩm
+                images: {
+                  $let: {
+                    vars: {
+                      laptop: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$laptopDetails',
+                              as: 'l',
+                              cond: { $eq: ['$$l._id', '$$detail.laptopId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $filter: {
+                        input: '$$laptop.images',
+                        as: 'img',
+                        cond: { $eq: ['$$img.isPrimary', true] },
+                      },
+                    },
+                  },
                 },
               },
             },
+          },
+          user: {
+            fullname: '$user.fullname',
+            phone: '$user.phone',
+            email: '$user.email',
           },
         },
       },
     ];
 
     return await Order.aggregate(pipeline);
+  }
+
+  async getOrderDetailById(orderId: string) {
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: { _id: new mongoose.Types.ObjectId(orderId) } },
+      {
+        $lookup: {
+          from: 'orderdetails',
+          localField: 'orderDetails',
+          foreignField: '_id',
+          as: 'orderDetails',
+        },
+      },
+      {
+        $lookup: {
+          from: 'laptops',
+          localField: 'orderDetails.laptopId',
+          foreignField: '_id',
+          as: 'laptopDetails',
+        },
+      },
+      {
+        $addFields: {
+          customerIdObj: {
+            $cond: [
+              { $eq: [{ $type: '$customerId' }, 'string'] },
+              { $toObjectId: '$customerId' },
+              '$customerId',
+            ],
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'customerIdObj',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          customerId: 1,
+          totalAmount: 1,
+          orderStatus: 1,
+          address: 1,
+          discountAmount: 1,
+          voucherId: 1,
+          paymentMethod: 1,
+          note: 1,
+          createdAt: 1,
+          orderDetails: {
+            $map: {
+              input: '$orderDetails',
+              as: 'detail',
+              in: {
+                _id: '$$detail._id',
+                laptopId: '$$detail.laptopId',
+                quantity: '$$detail.quantity',
+                price: '$$detail.price',
+                subTotal: '$$detail.subTotal',
+                images: {
+                  $let: {
+                    vars: {
+                      laptop: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$laptopDetails',
+                              as: 'l',
+                              cond: { $eq: ['$$l._id', '$$detail.laptopId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $filter: {
+                        input: '$$laptop.images',
+                        as: 'img',
+                        cond: { $eq: ['$$img.isPrimary', true] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          user: {
+            fullname: '$user.fullname',
+            phone: '$user.phone',
+            email: '$user.email',
+          },
+        },
+      },
+    ];
+
+    const [order] = await Order.aggregate(pipeline);
+    return order;
   }
 }

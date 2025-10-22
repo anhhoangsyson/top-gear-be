@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { UsersService } from '../service/users.service';
+import { UpdateUserDto } from '../dto/users.dto';
+import { Users } from '../schema/user.schema';
 
 const usersService = new UsersService();
 export class UsersController {
@@ -56,14 +58,85 @@ export class UsersController {
         .json({ message: error.message || 'Internal server error' });
     }
   }
-  async updataUserById(req: Request, res: Response): Promise<void> {
+  async updateProfile(req: Request, res: Response): Promise<void> {
     try {
-      const id = req.params.id;
-      const dataUser = req.body;
-      const user = await usersService.updateUserById(id, dataUser);
+      // get user from req.user passed from authenticateJWT middleware
+      if (!req.user) {
+        res.status(401).json({
+          message:
+            'Khong tim thay thong tin nguoi dung. Vui long dang nhap lai',
+        });
+        return;
+      }
+
+      const id = req.user._id;
+      const updateData: UpdateUserDto = req.body;
+
+      // don't update role in that case
+      delete (updateData as any).role;
+
+      // Kiểm tra nếu cập nhật username
+      if (updateData.usersname) {
+        const existingUsername = await Users.findOne({
+          usersname: updateData.usersname,
+          _id: { $ne: id }, // Không tính người dùng hiện tại
+        });
+
+        if (existingUsername) {
+          res.status(400).json({ message: 'Tên đăng nhập đã được sử dụng' });
+          return;
+        }
+      }
+
+      // Kiểm tra nếu cập nhật email
+      if (updateData.email) {
+        const existingEmail = await Users.findOne({
+          email: updateData.email,
+          _id: { $ne: id }, // Không tính người dùng hiện tại
+        });
+
+        if (existingEmail) {
+          res.status(400).json({ message: 'Email đã được sử dụng' });
+          return;
+        }
+      }
+
+      // Kiểm tra nếu đã cung cấp đủ thông tin để đánh dấu hồ sơ là hoàn thành
+      let profileCompleted = false;
+      const user = await Users.findById(id);
+
+      if (user) {
+        // Kết hợp thông tin hiện tại với thông tin cập nhật
+        const updatedUser = {
+          ...user.toObject(),
+          ...updateData,
+        };
+
+        // Kiểm tra nếu đã có đủ thông tin cần thiết
+        if (updatedUser.phone && updatedUser.address) {
+          profileCompleted = true;
+        }
+      }
+
+      // Cập nhật thông tin người dùng
+      const updatedUser = await Users.findByIdAndUpdate(
+        id,
+        {
+          ...updateData,
+          profileCompleted,
+          $set: { profileCompleted },
+        },
+        { new: true },
+      ).select('-password');
+
+      if (!updatedUser) {
+        res.status(404).json({ message: 'Không tìm thấy người dùng' });
+        return;
+      }
+
       res.status(200).json({
-        data: user,
-        message: 'updata thanh cong',
+        message: 'Cập nhật thông tin thành công',
+        data: updatedUser,
       });
     } catch (error: any) {
       res

@@ -39,7 +39,7 @@ export class PaymentService {
         app_time: Date.now(),
         item: JSON.stringify([]),
         embed_data: JSON.stringify({
-          redirecturl: urlCalbackSuccess || 'https://facebook.com',
+          redirecturl: urlCalbackSuccess || 'http://localhost:3001',
         }),
         amount: totalAmount,
         description: `Thanh toán đơn hàng ${order._id}`,

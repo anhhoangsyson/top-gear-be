@@ -1,125 +1,247 @@
-import type { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { CategoryService } from '../service/category.service';
-import {
-  createCategorySchema,
-  updateCategorySchema,
-  categoryIdSchema,
-  addCategoryAttributeSchema,
-} from '../schema/category.schema';
+import { ICategory } from '../schema/category.schema';
+import { ICreateCategoryDto, IUpdateCategoryDto } from '../dto/category.dto';
 
 export class CategoryController {
-  private service: CategoryService;
+  constructor(private readonly categoryService: CategoryService) {}
+  // private categoryService = new CategoryService();
 
-  constructor() {
-    this.service = new CategoryService();
-  }
-
-  async getAllCategories(req: Request, res: Response) {
+  async createCategory(req: Request, res: Response, next: NextFunction) {
     try {
-      const categories = await this.service.getAllCategories();
-      return res.status(200).json({ success: true, data: categories });
-    } catch (error: any) {
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async getCategoryById(req: Request, res: Response) {
-    try {
-      const { categoryId } = categoryIdSchema.parse(req.params);
-      const category = await this.service.getCategoryById(categoryId);
-      return res.status(200).json({ success: true, data: category });
-    } catch (error: any) {
-      if (error.message === 'Category not found') {
-        return res.status(404).json({ success: false, message: error.message });
+      if (!req.file) {
+        res.status(400).json({ message: 'Vui lòng  tải lên hình ảnh' });
       }
-      return res.status(500).json({ success: false, message: error.message });
+
+      const { name, description, parentId, sortOrder, isActive } = req.body;
+      const imageUrl = req.file?.path;
+      console.log('imageUrl', imageUrl);
+
+      const categoryData: ICreateCategoryDto = {
+        name: name as string,
+        description,
+        parentId: parentId || null,
+        sortOrder: sortOrder || 0,
+        isActive: isActive || true,
+        image: imageUrl,
+      };
+
+      const category = await this.categoryService.createCategory(categoryData);
+
+      res.status(201).json({
+        data: category,
+        message: 'Tao category thanh cong',
+      });
+      return category;
+    } catch (error) {
+      next(error);
     }
   }
 
-  async createCategory(req: Request, res: Response) {
+  async findCategoryById(req: Request, res: Response, next: NextFunction) {
     try {
-      const data = createCategorySchema.parse(req.body);
-      const category = await this.service.createCategory(data);
-      return res.status(201).json({ success: true, data: category });
-    } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      const { id } = req.params;
+      const category = await this.categoryService.findCategoryById(id);
+      res.status(200).json({
+        data: category,
+        message: 'Lấy category thành công',
+      });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async updateCategory(req: Request, res: Response) {
+  async findAllCategories(req: Request, res: Response, next: NextFunction) {
     try {
-      const { categoryId } = categoryIdSchema.parse(req.params);
-      const data = updateCategorySchema.parse(req.body);
-      const category = await this.service.updateCategory(categoryId, data);
-      return res.status(200).json({ success: true, data: category });
-    } catch (error: any) {
-      if (error.message === 'Category not found') {
-        return res.status(404).json({ success: false, message: error.message });
-      }
-      return res.status(400).json({ success: false, message: error.message });
+      const categories = await this.categoryService.findAllCategories();
+      res.status(200).json({
+        data: categories,
+        length: categories.length,
+        message: 'Lấy tất cả category thành công',
+      });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async deleteCategory(req: Request, res: Response) {
+  async findTopLevelCategories(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
     try {
-      const { categoryId } = categoryIdSchema.parse(req.params);
-      await this.service.deleteCategory(categoryId);
-      return res
-        .status(200)
-        .json({ success: true, message: 'Category deleted successfully' });
-    } catch (error: any) {
-      if (error.message === 'Category not found') {
-        return res.status(404).json({ success: false, message: error.message });
-      }
-      return res.status(500).json({ success: false, message: error.message });
+      const categories = await this.categoryService.findTopLevelCategories();
+      res.status(200).json({
+        data: categories,
+        message: 'Lấy danh mục cấp cao nhất thành công',
+      });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async getCategoryAttributes(req: Request, res: Response) {
+  async findSubCategories(req: Request, res: Response, next: NextFunction) {
     try {
-      const { categoryId } = categoryIdSchema.parse(req.params);
-      const attributes = await this.service.getCategoryAttributes(categoryId);
-      return res.status(200).json({ success: true, data: attributes });
-    } catch (error: any) {
-      if (error.message === 'Category not found') {
-        return res.status(404).json({ success: false, message: error.message });
-      }
-      return res.status(500).json({ success: false, message: error.message });
+      const { parentId } = req.params;
+      const subCategories =
+        await this.categoryService.findSubCategories(parentId);
+      res.status(200).json({
+        data: subCategories,
+        message: 'Lấy danh mục con thành công',
+      });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async addCategoryAttribute(req: Request, res: Response) {
+  async findCategoryBySlug(req: Request, res: Response, next: NextFunction) {
     try {
-      const { categoryId } = categoryIdSchema.parse(req.params);
-      const data = addCategoryAttributeSchema.parse(req.body);
-      const attribute = await this.service.addCategoryAttribute(
-        categoryId,
-        data,
+      const { slug } = req.params;
+      const category = await this.categoryService.findCategoryBySlug(slug);
+      res.status(200).json({
+        data: category,
+        message: 'Lấy danh mục theo slug thành công',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async findAllActiveCategories(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const categories = await this.categoryService.findAllActiveCategories();
+      res.status(200).json({
+        data: categories,
+        message: 'Lấy tất cả danh mục hoạt động thành công',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async findAllSortedCategories(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const categories = await this.categoryService.findAllSortedCategories();
+      res.status(200).json({
+        data: categories,
+        message: 'Lấy tất cả danh mục đã sắp xếp thành công',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async findCategoryWithSubCategories(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const { parentId } = req.params;
+      const { parent, subCategories } =
+        await this.categoryService.findCategoryWithSubCategories(parentId);
+      res.status(200).json({
+        data: { parent, subCategories },
+        message: 'Lấy danh mục với danh mục con thành công',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateCategory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const image = req.file?.path;
+
+      const { name, description, parentId, sortOrder, isActive } = req.body;
+
+      const categoryData: IUpdateCategoryDto = {
+        name: name as string,
+        description: description,
+        parentId: parentId || null,
+        sortOrder: sortOrder || 0,
+        isActive: isActive,
+        image: image || req.body.image,
+      };
+
+      const updatedCategory = await this.categoryService.updateCategory(
+        id,
+        categoryData,
       );
-      return res.status(201).json({ success: true, data: attribute });
-    } catch (error: any) {
-      if (error.message === 'Category not found') {
-        return res.status(404).json({ success: false, message: error.message });
-      }
-      return res.status(400).json({ success: false, message: error.message });
+      res.status(200).json({
+        data: updatedCategory,
+        message: 'Cập nhật danh mục thành công',
+      });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async removeCategoryAttribute(req: Request, res: Response) {
+  async inactivateCategory(req: Request, res: Response, next: NextFunction) {
     try {
-      const { categoryId, attributeId } = req.params;
-      await this.service.removeCategoryAttribute(categoryId, attributeId);
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: 'Category attribute removed successfully',
-        });
-    } catch (error: any) {
-      if (error.message === 'Category attribute not found') {
-        return res.status(404).json({ success: false, message: error.message });
-      }
-      return res.status(500).json({ success: false, message: error.message });
+      const { id } = req.params;
+      const inactivatedCategory =
+        await this.categoryService.inactivateCategory(id);
+      res.status(200).json({
+        data: inactivatedCategory,
+        message: 'Vô hiệu hóa danh mục thành công',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async activateCategory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const activatedCategory = await this.categoryService.activateCategory(id);
+      res.status(200).json({
+        data: activatedCategory,
+        message: 'Kích hoạt danh mục thành công',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateCategorySortOrder(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const { id } = req.params;
+      const { sortOrder } = req.body;
+      const updatedCategory =
+        await this.categoryService.updateCategorySortOrder(id, sortOrder);
+      res.status(200).json({
+        data: updatedCategory,
+        message: 'Cập nhật thứ tự danh mục thành công',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async hasSubCategories(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const hasSubCategories = await this.categoryService.hasSubCategories(id);
+      res.status(200).json({
+        data: hasSubCategories,
+        message: 'Kiểm tra danh mục có danh mục con thành công',
+      });
+    } catch (error) {
+      next(error);
     }
   }
 }

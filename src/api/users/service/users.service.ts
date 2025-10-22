@@ -1,10 +1,10 @@
-import { IUser, createUser } from '../dto/users.dto';
+import { CreateUserDto, IUser, UpdateUserDto } from '../dto/users.dto';
 import { UsersRepository } from '../repository/users.repository';
 
 export class UsersService {
   private usersRepository = new UsersRepository();
 
-  async createUsers(usersData: Partial<createUser>): Promise<createUser> {
+  async createUsers(usersData: Partial<CreateUserDto>): Promise<CreateUserDto> {
     return await this.usersRepository.createUsers(usersData);
   }
   async getAllUsers(): Promise<IUser[]> {
@@ -24,7 +24,10 @@ export class UsersService {
     }
     return user;
   }
-  async updateUserById(id: string, dataUser: IUser): Promise<IUser | null> {
+  async updateUserById(
+    id: string,
+    dataUser: UpdateUserDto,
+  ): Promise<IUser | null> {
     const user = await this.usersRepository.updataUsersById(id, dataUser);
     if (!user) {
       throw new Error('user not found');

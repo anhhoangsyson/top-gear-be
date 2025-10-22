@@ -1,21 +1,15 @@
-import mongoose, { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, model, Document, Types } from 'mongoose';
 
 export interface IOrderDetail {
-  _id?: string;
-  orderId: string;
-  productVariantId: string;
+  laptopId: Types.ObjectId;
   quantity: number;
   price: number;
   subTotal: number;
 }
+export interface IOrderDetailResponse extends IOrderDetail, Document {}
 
 const OrderDetailSchema = new Schema<IOrderDetail>({
-  orderId: {
-    type: String,
-    required: true,
-    ref: 'Order',
-  },
-  productVariantId: { type: String, required: true },
+  laptopId: { type: Schema.Types.ObjectId, ref: 'Laptop', required: true },
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
   subTotal: { type: Number, required: true },

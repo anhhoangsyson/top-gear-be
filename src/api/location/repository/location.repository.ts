@@ -31,4 +31,16 @@ export class LocationRepository {
   async updateLocation(id: string, locationdata: Partial<ILocation>) {
     return Location.findByIdAndUpdate(id, locationdata, { new: true }).exec();
   }
+
+  async findById(id: string) {
+    return Location.findById(id);
+  }
+
+  async updateMany(filter: any, update: any) {
+    return Location.updateMany(filter, update);
+  }
+
+  async updateById(id: string, update: any) {
+    return Location.findByIdAndUpdate(id, update);
+  }
 }

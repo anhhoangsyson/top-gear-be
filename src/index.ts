@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import connectDatabase from './config/database/database.config';
 import usersRouter from './api/users/router/users.router';
 import menusRouter from './api/menus/router/menus.router';
-import categoriesRouter from './api/categories/router/categories.router';
 import connectRedis from './config/redis/redis.config';
 import setupSwagger from './config/swagger/swagger.config';
 import path = require('path');
@@ -21,23 +20,30 @@ import productVariantsRouter from './api/productVariants/router/productVariants.
 import productImageRouter from './api/produductImage/router/productImage.router';
 import locationRouter from './api/location/route/location.router';
 import vouchersRouter from './api/voucher/router/voucher.router';
+import brandRoute from './api/brand/router/brand.router';
 const cors = require('cors');
-
 dotenv.config();
 import './config/passport/passport.config';
 import productAttributesRouter from './api/productAttibutes/router/productAttribute.router';
-import mongoose from 'mongoose';
+import errorHandler from './middlewares/errorHandle';
+import categoryRouter from './api/category/router/category.router';
+import laptopRouter from './api/laptop/router/laptop.router';
+import laptopGroupRouter from './api/laptop-group/router/laptop-group.router';
+import dashboardRouter from './api/dashboard/dashboard.router';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 app.use(
   cors({
     credentials: true,
-    origin: ['http://localhost:3000'],
+    origin: ['http://localhost:3001'],
     allowedHeaders: 'Content-Type,Authorization',
   }),
 );
+
 const PORT = 3000;
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 setupSwagger(app);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, './views'));
@@ -48,10 +54,10 @@ app.get('/', (req: Request, res: Response) => {
   res.send('taideptrai1901');
 });
 
-app.use('/api/v1/auth', authRouter), app.use('/api/v1/users', usersRouter);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/users', usersRouter);
 app.use('/api/v1/menus', menusRouter);
-app.use('/api/v1/categories', categoriesRouter);
-app.use('/api/v1/blogs', blogsRouter);
+app.use('/api/v1/blog', blogsRouter);
 app.use('/api/v1/comments', commentsRouter);
 app.use('/api/v1/likes', likesRouter);
 app.use('/api/v1/carts', cartsRouter);
@@ -63,7 +69,13 @@ app.use('/api/v1/pattributes', productAttributesRouter);
 app.use('/api/v1/pimages', productImageRouter);
 app.use('/api/v1/order', orderRouter);
 app.use('/api/v1/location', locationRouter);
-app.use('/api/v1/vouchers', vouchersRouter);
+app.use('/api/v1/voucher', vouchersRouter);
+app.use('/api/v1/brand', brandRoute);
+app.use('/api/v1/category', categoryRouter);
+app.use('/api/v1/laptop', laptopRouter);
+app.use('/api/v1/laptop-group', laptopGroupRouter);
+app.use('/api/v1/admin/dashboard', dashboardRouter);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server đang chạy ${PORT}`);

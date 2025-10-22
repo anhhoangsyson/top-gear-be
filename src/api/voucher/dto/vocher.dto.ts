@@ -1,20 +1,11 @@
-import mongoose from 'mongoose';
-
 export interface IVoucher {
-  _id: mongoose.Types.ObjectId;
-  code: string;
+  _id?: string;
+  code?: string; // Có thể undefined nếu là voucher auto
+  type: 'code' | 'auto'; // Phân biệt loại voucher
   expiredDate: Date;
   pricePercent: number;
   priceOrigin: number;
-  status: string; // Có thể là 'active', 'inactive', hoặc trạng thái khác tùy theo yêu cầu
-  createdAt: Date; // Thời gian tạo
-  updatedAt: Date; // Thời gian cập nhật
+  status: 'active' | 'inactive';
 }
 
-export interface createVoucher {
-  code: string;
-  expiredDate: Date;
-  pricePercent: number;
-  priceOrigin: number;
-  status: string; // Có thể là 'active', 'inactive', hoặc trạng thái khác
-}
+export interface CreateVoucherDto extends Omit<IVoucher, '_id'> {}

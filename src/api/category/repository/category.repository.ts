@@ -1,145 +1,86 @@
-import { db } from '@/lib/db';
-import type { CategoryDto, CategoryAttributeDto } from '../dto/category.dto';
+import Category, { ICategory } from '../schema/category.schema';
+// import { findTopLevelCategory } from '../../../lib/category';
 
 export class CategoryRepository {
-  async findAll(): Promise<CategoryDto[]> {
-    return db.query(`
-      SELECT categoryId, categoryName, isDeleted
-      FROM Category
-      WHERE isDeleted = false
-      ORDER BY categoryName ASC
-    `);
+  constructor(private readonly categoryModel: typeof Category) {}
+
+  async create(data: Partial<ICategory>): Promise<ICategory> {
+    const category = new Category(data);
+    return await category.save();
   }
 
-  async findById(categoryId: string): Promise<CategoryDto | null> {
-    const results = await db.query(
-      `
-      SELECT categoryId, categoryName, isDeleted
-      FROM Category
-      WHERE categoryId = $1
-    `,
-      [categoryId],
-    );
-
-    return results.length > 0 ? results[0] : null;
+  async findById(id: string): Promise<ICategory | null> {
+    return await Category.findById(id).exec();
   }
 
-  async create(categoryName: string): Promise<CategoryDto> {
-    const result = await db.query(
-      `
-      INSERT INTO Category (categoryName)
-      VALUES ($1)
-      RETURNING categoryId, categoryName, isDeleted
-    `,
-      [categoryName],
-    );
+  async findAll(): Promise<ICategory[]> {
+    return await Category.find().exec();
+  }
 
-    return result[0];
+  async findTopLevelCategory(): Promise<ICategory[]> {
+    return await Category.find({ parentId: null }).exec();
+  }
+
+  async findSubCategor(parentId: string): Promise<ICategory[]> {
+    return await Category.find({ parentId }).exec();
+  }
+
+  async findBySlub(id: string): Promise<ICategory | null> {
+    return Category.findOne({ slug: id }).exec();
+  }
+
+  async findAllActiveCategory(): Promise<ICategory[] | null> {
+    return await Category.find({ isActive: true }).exec();
+  }
+
+  async findAllSortedCategory(): Promise<ICategory[]> {
+    return await Category.find().sort({ sortOrder: 1 }).exec();
+  }
+
+  async findCategoryWithSubCategories(
+    parentId: string,
+  ): Promise<{ parent: ICategory | null; subCategories: ICategory[] }> {
+    const parent = await Category.findById(parentId).exec();
+    const subCategories = await Category.find({ parentId }).exec();
+    return { parent, subCategories };
   }
 
   async update(
-    categoryId: string,
-    data: { categoryName?: string; isDeleted?: boolean },
-  ): Promise<CategoryDto | null> {
-    // Build dynamic update query based on provided fields
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramIndex = 1;
-
-    if (data.categoryName !== undefined) {
-      updates.push(`categoryName = $${paramIndex++}`);
-      values.push(data.categoryName);
-    }
-
-    if (data.isDeleted !== undefined) {
-      updates.push(`isDeleted = $${paramIndex++}`);
-      values.push(data.isDeleted);
-    }
-
-    if (updates.length === 0) return this.findById(categoryId);
-
-    values.push(categoryId);
-
-    const result = await db.query(
-      `
-      UPDATE Category
-      SET ${updates.join(', ')}
-      WHERE categoryId = $${paramIndex}
-      RETURNING categoryId, categoryName, isDeleted
-    `,
-      values,
-    );
-
-    return result.length > 0 ? result[0] : null;
+    id: string,
+    data: Partial<ICategory>,
+  ): Promise<ICategory | null> {
+    return await Category.findByIdAndUpdate(id, data, { new: true }).exec();
   }
 
-  async delete(categoryId: string): Promise<boolean> {
-    // Soft delete
-    const result = await db.query(
-      `
-      UPDATE Category
-      SET isDeleted = true
-      WHERE categoryId = $1
-    `,
-      [categoryId],
-    );
-
-    return result.affectedRows > 0;
+  async inActiveCategory(id: string): Promise<ICategory | null> {
+    return await Category.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true },
+    ).exec();
   }
 
-  async getCategoryAttributes(
-    categoryId: string,
-  ): Promise<CategoryAttributeDto[]> {
-    return db.query(
-      `
-      SELECT ca.categoryAttributeId, ca.categoryId, ca.attributeId, a.attributeName
-      FROM CategoryAttribute ca
-      JOIN Attribute a ON ca.attributeId = a.attributeId
-      WHERE ca.categoryId = $1
-    `,
-      [categoryId],
-    );
+  async activeCategory(id: string): Promise<ICategory | null> {
+    return await Category.findByIdAndUpdate(
+      id,
+      { isActive: true },
+      { new: true },
+    ).exec();
   }
 
-  async addCategoryAttribute(
-    categoryId: string,
-    attributeId: string,
-  ): Promise<CategoryAttributeDto> {
-    const result = await db.query(
-      `
-      INSERT INTO CategoryAttribute (categoryId, attributeId)
-      VALUES ($1, $2)
-      RETURNING categoryAttributeId, categoryId, attributeId
-    `,
-      [categoryId, attributeId],
-    );
-
-    // Get attribute name
-    const attribute = await db.query(
-      `
-      SELECT attributeName FROM Attribute WHERE attributeId = $1
-    `,
-      [attributeId],
-    );
-
-    return {
-      ...result[0],
-      attributeName: attribute[0].attributeName,
-    };
+  async updateSortOrder(
+    id: string,
+    sortOrder: number,
+  ): Promise<ICategory | null> {
+    return await Category.findByIdAndUpdate(
+      id,
+      { sortOrder },
+      { new: true },
+    ).exec();
   }
 
-  async removeCategoryAttribute(
-    categoryId: string,
-    attributeId: string,
-  ): Promise<boolean> {
-    const result = await db.query(
-      `
-      DELETE FROM CategoryAttribute
-      WHERE categoryId = $1 AND attributeId = $2
-    `,
-      [categoryId, attributeId],
-    );
-
-    return result.affectedRows > 0;
+  async hadSubCategory(id: string): Promise<boolean> {
+    const count = await Category.countDocuments({ parentId: id }).exec();
+    return count > 0;
   }
 }

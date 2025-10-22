@@ -1,7 +1,8 @@
 interface CartItem {
   _id: string;
   quantity: number;
-  variantPrice: number;
+  price: number;
+  discountPrice: number;
 }
 export enum PaymentMethod {
   CASH = 'cash',
@@ -12,11 +13,13 @@ export class CreateOrderDto {
   address: string;
   paymentMethod: PaymentMethod;
   voucherCode?: string | null;
+  voucherId?: string | null;
   cartItem: CartItem[];
   note?: string;
   constructor(data: {
     customerId: string;
     address: string;
+    voucherId?: string | null;
     paymentMethod: string;
     voucherCode?: string | null;
     cartItem: CartItem[];
@@ -24,6 +27,7 @@ export class CreateOrderDto {
   }) {
     this.customerId = data.customerId;
     this.address = data.address;
+    this.voucherId = data.voucherId || null;
     this.paymentMethod = data.paymentMethod as PaymentMethod;
     this.voucherCode = data.voucherCode || null;
     this.cartItem = data.cartItem;

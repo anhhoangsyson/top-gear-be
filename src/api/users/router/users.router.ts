@@ -24,7 +24,7 @@ usersRouter.get('/:id', (req, res) => {
 usersRouter.delete('/:id', (req, res) => {
   usersController.deleteById(req, res);
 });
-usersRouter.patch('/:id', (req, res) => {
-  usersController.updataUserById(req, res);
+usersRouter.put('/profile', authenticateJWT, (req, res) => {
+  usersController.updateProfile(req, res);
 });
 export default usersRouter;

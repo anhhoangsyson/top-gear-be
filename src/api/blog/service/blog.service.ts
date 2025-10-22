@@ -1,4 +1,4 @@
-import { Iblog, creatblog } from '../dto/blog.dto';
+import { Iblog, ICreatblog } from '../dto/blog.dto';
 import { BlogiesRepository } from '../repository/blog.repository';
 
 export class BlogService {
@@ -8,7 +8,7 @@ export class BlogService {
     return this.c.getAllBlogs();
   }
 
-  async createBlog(blogData: Partial<creatblog>): Promise<creatblog> {
+  async createBlog(blogData: Partial<ICreatblog>): Promise<ICreatblog> {
     return await this.c.createBlog(blogData);
   }
 
@@ -36,6 +36,14 @@ export class BlogService {
     const blog = await this.c.updateBlogById(id, dataBlog); // Sửa tên phương thức gọi tới repository
     if (!blog) {
       throw new Error('Blog not found'); // Đổi thông báo lỗi
+    }
+    return blog;
+  }
+
+  async getBlogBySlug(slug: string): Promise<Iblog> {
+    const blog = await this.c.getBlogBySlug(slug);
+    if (!blog) {
+      throw new Error('Blog not found');
     }
     return blog;
   }

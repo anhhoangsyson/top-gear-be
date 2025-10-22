@@ -1,5 +1,7 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 import { IUser } from '../../users/dto/users.dto';
+import { ILaptop } from '../../laptop/schema/laptop.schema';
+import { IOrderDetail } from '../../orderDetail/schema/orderDetail.schema';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -21,8 +23,8 @@ export interface IOrder extends Document {
   paymentMethod: String;
   paymentUrl: string;
   paymentTransactionId: string;
-  orderDetails: Array<any>;
-  createAt: Date;
+  orderDetails: Types.ObjectId[] | IOrderDetail[];
+  createdAt: Date;
   note?: string; // Assuming OrderDetail is another model, you can replace 'any' with the actual type
 }
 
@@ -34,7 +36,7 @@ export interface IOrderWithCustomer extends IOrder {
         | 'role'
         | 'avatar'
         | '_id'
-        | 'createAt'
+        | 'createdAt'
         | 'updateAt'
         | 'usersname'
         | 'sex'
@@ -42,22 +44,25 @@ export interface IOrderWithCustomer extends IOrder {
     | 'email';
 }
 
-const orderSchema = new Schema<IOrder>({
-  voucherId: { type: String, default: null },
-  customerId: { type: String, required: true },
-  totalAmount: { type: Number, required: true },
-  orderStatus: {
-    type: String,
-    enum: Object.values(OrderStatus),
-    default: OrderStatus.PENDING,
+const orderSchema = new Schema<IOrder>(
+  {
+    voucherId: { type: String, default: null },
+    customerId: { type: String, required: true },
+    totalAmount: { type: Number, required: true },
+    orderStatus: {
+      type: String,
+      enum: Object.values(OrderStatus),
+      default: OrderStatus.PENDING,
+    },
+    address: { type: String, required: true },
+    discountAmount: { type: Number, default: 0 },
+    paymentMethod: { type: String, required: true },
+    paymentUrl: { type: String, default: null },
+    paymentTransactionId: { type: String, default: null },
+    orderDetails: [{ type: Schema.Types.ObjectId, ref: 'OrderDetail' }],
+    note: { type: String, default: '' },
   },
-  address: { type: String, required: true },
-  discountAmount: { type: Number, default: 0 },
-  paymentMethod: { type: String, required: true },
-  paymentUrl: { type: String, default: null },
-  paymentTransactionId: { type: String, default: null },
-  orderDetails: [{ type: Schema.Types.ObjectId, ref: 'OrderDetail' }],
-  createAt: { type: Date, default: Date.now },
-  note: { type: String, default: '' },
-});
+
+  { timestamps: true },
+);
 export default model<IOrder>('Order', orderSchema);

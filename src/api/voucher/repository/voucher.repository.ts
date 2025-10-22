@@ -1,44 +1,40 @@
-// import Voucher, { IVoucher } from '../schema/voucher.schema';
+import { Voucher } from '../schema/voucher.schema';
+import { IVoucher, CreateVoucherDto } from '../dto/vocher.dto';
 
-// class VoucherRepository {
-//   async findVoucherByCode(code: string): Promise<IVoucher | null> {
-//     return await Voucher.findOne({ code }).exec();
-//   }
+export class VoucherRepository {
+  async getAll(): Promise<IVoucher[]> {
+    return Voucher.find().lean();
+  }
 
-//   async updateVoucherUsageCount(code: string): Promise<IVoucher | null> {
-//     return await Voucher.findByIdAndUpdate(
-//       code,
-//       { $inc: { usedCount: 1 } },
-//       { new: true },
-//     );
-//   }
-// }
-// export default new VoucherRepository();
-import { IVoucher, createVoucher } from '../dto/vocher.dto'; // Ensure you have created the file voucher.dto.ts with interface IVoucher and CreateVoucherDto
-import { Voucher } from '../schema/voucher.schema'; // Ensure you have created the file voucher.schema.ts with the schema for vouchers
-export class VouchersRepository {
-  // Get all vouchers
-  async getAllVouchers(): Promise<IVoucher[]> {
-    return await Voucher.find(); // Retrieve all vouchers
+  async getById(id: string): Promise<IVoucher | null> {
+    return Voucher.findById(id).lean();
   }
-  // Create a new voucher
-  async createVoucher(voucherData: Partial<createVoucher>): Promise<IVoucher> {
-    const voucher = new Voucher(voucherData);
-    return await voucher.save(); // Save the new voucher
+
+  async getByCode(code: string): Promise<IVoucher | null> {
+    return Voucher.findOne({ code }).lean();
   }
-  // Get a voucher by ID
-  async getVoucherById(id: string): Promise<IVoucher | null> {
-    return await Voucher.findById(id); // Retrieve a voucher by its ID
+
+  async create(data: CreateVoucherDto): Promise<IVoucher> {
+    const voucher = new Voucher(data);
+    return voucher.save();
   }
-  // Delete a voucher by ID
-  async deleteVoucherById(id: string): Promise<IVoucher | null> {
-    return await Voucher.findByIdAndDelete(id); // Delete the voucher by its ID
-  }
-  // Update a voucher by ID
-  async updateVoucherById(
+
+  async update(
     id: string,
-    voucherData: Partial<IVoucher>,
+    data: Partial<CreateVoucherDto>,
   ): Promise<IVoucher | null> {
-    return await Voucher.findByIdAndUpdate(id, voucherData, { new: true }); // Update the voucher and return the updated document
+    return Voucher.findByIdAndUpdate(id, data, { new: true }).lean();
+  }
+
+  async delete(id: string): Promise<IVoucher | null> {
+    return Voucher.findByIdAndDelete(id).lean();
+  }
+
+  async getAvailableVouchers(): Promise<IVoucher[]> {
+    const now = new Date();
+    return Voucher.find({
+      status: 'active',
+      expiredDate: { $gte: now },
+    }).lean();
   }
 }

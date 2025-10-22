@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { BlogService } from '../service/blog.service'; // Sửa tên import từ CategoriesService thành BlogService
 const blogService = new BlogService(); // Sửa tên biến từ categoriesService thành blogService
 
@@ -17,19 +17,30 @@ export class BlogController {
     }
   }
 
-  async createBlog(req: Request, res: Response): Promise<void> {
+  async createBlog(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     // Đổi tên phương thức
     try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
+
+      const userId = user._id;
       const body = req.body;
-      const blog = await blogService.createBlog(body); // Sửa tên phương thức gọi tới service
+      const { title, content, thumbnail, tags } = req.body; // Lấy các trường cần thiết từ body
+
+      const blog = await blogService.createBlog({ ...body, userId });
       res.status(201).json({
         data: blog,
         message: 'Tạo blog thành công', // Đổi thông báo
       });
     } catch (error: any) {
-      res
-        .status(500)
-        .json({ message: error.message || 'Internal server error' });
+      next(error); // Gọi next với lỗi để xử lý ở middleware lỗi
     }
   }
 
@@ -70,6 +81,23 @@ export class BlogController {
       res.status(200).json({
         data: blog,
         message: 'Cập nhật blog thành công', // Đổi thông báo
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || 'Lỗi máy chủ nội bộ' });
+    }
+  }
+
+  async getBlogBySlug(req: Request, res: Response): Promise<void> {
+    try {
+      const { slug } = req.params;
+      const blog = await blogService.getBlogBySlug(slug); // Sửa tên phương thức gọi tới service
+      if (!blog) {
+        res.status(404).json({ message: 'Blog không tồn tại' }); // Đổi thông báo lỗi
+        return;
+      }
+      res.status(200).json({
+        data: blog,
+        message: 'Lấy blog theo slug thành công', // Đổi thông báo
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message || 'Lỗi máy chủ nội bộ' });

@@ -4,6 +4,8 @@ import { Voucher } from '../../voucher/schema/voucher.schema';
 import { OrderStatus } from '../schema/order.schema';
 import { PaymentService } from './payment.service';
 import Order from '../schema/order.schema';
+import { Types } from 'mongoose';
+import Laptop from '../../laptop/schema/laptop.schema';
 
 export default class OrderService {
   private orderRepository = new OrderRepository();
@@ -12,48 +14,43 @@ export default class OrderService {
     createOrderData: CreateOrderDto,
     customerId: string,
   ): Promise<any> {
-    console.log('Entering findOrderById with orderId');
-    const { address, paymentMethod, voucherCode, cartItem, note } =
+    const { address, paymentMethod, voucherCode, voucherId, cartItem, note } =
       createOrderData;
     const subTotal = cartItem.reduce(
-      (sum, item) => sum + item.variantPrice * item.quantity,
+      (sum, item) => sum + item.discountPrice * item.quantity,
       0,
     );
-    // const subTotal = 100
-    let discountAmount = 0;
-    let voucherId: string | null = null;
 
-    // checkVoucher
-    // if (voucherCode) {
-    //   const voucher = await Voucher.findOne({ code: voucherCode }).lean();
-    //   if (
-    //     !voucher ||
-    //     !voucher.status ||
-    //     voucher. >= voucher.usageLimit
-    //   ) {
-    //     throw new Error('Voucher không hợp lệ hoặc đã hết lượt sử dụng');
-    //   }
-    //   if (subTotal < voucher.minOrderValue) {
-    //     throw new Error('Giá trị đơn hàng không đủ để sử dụng voucher này');
-    //   }
-    //   discountAmount =
-    //     voucher.discountType === 'fixed'
-    //       ? voucher.discountValue
-    //       : Math.min(
-    //         subTotal * (voucher.discountValue / 100),
-    //         voucher.maxDiscount,
-    //       );
-    //   voucherId = voucher._id.toString();
-    //   await Voucher.findByIdAndUpdate(
-    //     { code: voucherCode },
-    //     { $inc: { usedCount: 1 } },
-    //   );
-    // }
+    let discountAmount = 0;
+    console.log('voucehrid', voucherId);
+
+    if (voucherId) {
+      const voucher = await Voucher.findById(new Types.ObjectId(voucherId));
+      console.log('voucher', voucher);
+
+      if (!voucher) throw new Error('Voucher không tồn tại');
+      if (new Date(voucher.expiredDate) < new Date())
+        throw new Error('Voucher đã hết hạn');
+      if (voucher.status !== 'active') throw new Error('Voucher không hợp lệ');
+
+      if (voucher.pricePercent > 0) {
+        // Giảm theo %
+        discountAmount = Math.floor(subTotal * (voucher.pricePercent / 100));
+        // Nếu có giới hạn số tiền giảm tối đa
+      } else if (voucher.priceOrigin > 0) {
+        // Giảm số tiền cố định
+        discountAmount = voucher.priceOrigin;
+        if (discountAmount > subTotal) discountAmount = subTotal;
+      }
+    }
 
     const intiialStatus =
       paymentMethod === 'zalopay'
         ? OrderStatus.PAYMENT_PENDING
         : OrderStatus.PENDING;
+
+    console.log('discountAmount', discountAmount);
+    console.log('totalAmount', subTotal - discountAmount);
 
     const orderData = {
       customerId,
@@ -71,15 +68,14 @@ export default class OrderService {
       _id: string;
       [key: string]: any;
     };
-    console.log('order da tao', order);
-    console.log('Cart items:', cartItem);
+
     const orderDetailsData = cartItem.map((item) => ({
-      orderId: order._id,
-      productVariantId: item._id,
+      laptopId: new Types.ObjectId(item._id),
       quantity: item.quantity,
-      price: item.variantPrice,
-      subTotal: item.quantity * item.variantPrice,
+      price: item.discountPrice,
+      subTotal: item.quantity * item.discountPrice,
     }));
+
     const createOrderDetails =
       await this.orderRepository.createOrderDetail(orderDetailsData);
     const orderDetailIds = createOrderDetails.map((item) => item._id);
@@ -149,7 +145,26 @@ export default class OrderService {
   }
 
   async changeOrderStatus(status: string, id: string) {
-    return await this.orderRepository.changeOrderStatus(status, id);
+    // Lấy đơn hàng trước khi cập nhật
+    const oldOrder = await Order.findById(id).populate('orderDetails');
+    const order = await this.orderRepository.changeOrderStatus(status, id);
+
+    // Nếu chuyển sang completed và trước đó chưa phải completed thì cập nhật stock
+    if (
+      order &&
+      status === 'completed' &&
+      oldOrder?.orderStatus !== 'completed'
+    ) {
+      if (oldOrder && oldOrder.orderDetails) {
+        for (const detail of oldOrder.orderDetails as any[]) {
+          await Laptop.updateOne(
+            { _id: detail.laptopId },
+            { $inc: { stock: -detail.quantity } },
+          );
+        }
+      }
+    }
+    return order;
   }
 
   async getAllOrders() {

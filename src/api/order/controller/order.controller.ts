@@ -10,6 +10,8 @@ export default class OrderController {
   async createOrder(req: Request, res: Response) {
     try {
       const createOrderDto = new CreateOrderDto(req.body);
+      console.log('createOrderDto', createOrderDto);
+
       const customerId = req.user?._id;
 
       if (!customerId) {
@@ -20,6 +22,7 @@ export default class OrderController {
         createOrderDto,
         customerId,
       );
+
       res.status(201).json({
         data: order,
         message: 'Order created successfully',
@@ -61,7 +64,7 @@ export default class OrderController {
 
   async getMyOrders(req: Request, res: Response) {
     const customerId = req.user?._id;
-    console.log('customerId', customerId);
+    // console.log('customerId', customerId);
     try {
       if (!customerId) {
         res.status(401).json({
@@ -86,6 +89,7 @@ export default class OrderController {
   }
 
   async cancelingOrder(req: Request, res: Response) {
+    const user = req.user;
     const orderId = req.params.id;
     try {
       const order = await this.orderService.cancelingOrder(orderId);
@@ -94,6 +98,9 @@ export default class OrderController {
           message: 'Order not found',
         });
       }
+
+      // Gửi thông báo hủy đơn hàng
+
       res.status(200).json({
         data: order,
         message: 'Order canceled successfully',
@@ -173,8 +180,10 @@ export default class OrderController {
   async changeOrderStatus(req: Request, res: Response) {
     const orderId = req.params.id;
     const status = req.body.status;
+    console.log('changeOrderStatus', orderId, status);
+
     try {
-      const orderStatus = await this.orderRepository.changeOrderStatus(
+      const orderStatus = await this.orderService.changeOrderStatus(
         status,
         orderId,
       );

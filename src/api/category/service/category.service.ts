@@ -1,80 +1,73 @@
+import { ICreateCategoryDto } from '../dto/category.dto';
 import { CategoryRepository } from '../repository/category.repository';
-import type {
-  CategoryDto,
-  CreateCategoryDto,
-  UpdateCategoryDto,
-  CategoryAttributeDto,
-  AddCategoryAttributeDto,
-} from '../dto/category.dto';
+import { ICategory } from '../schema/category.schema';
 
 export class CategoryService {
-  private repository: CategoryRepository;
+  constructor(private readonly categoryRepository: CategoryRepository) {}
 
-  constructor() {
-    this.repository = new CategoryRepository();
+  async createCategory(categoryData: ICreateCategoryDto): Promise<ICategory> {
+    return await this.categoryRepository.create(categoryData);
   }
 
-  async getAllCategories(): Promise<CategoryDto[]> {
-    return this.repository.findAll();
+  async findCategoryById(id: string): Promise<ICategory | null> {
+    return await this.categoryRepository.findById(id);
   }
 
-  async getCategoryById(categoryId: string): Promise<CategoryDto> {
-    const category = await this.repository.findById(categoryId);
-    if (!category) {
-      throw new Error('Category not found');
-    }
-    return category;
+  async findAllCategories(): Promise<ICategory[]> {
+    return await this.categoryRepository.findAll();
   }
 
-  async createCategory(data: CreateCategoryDto): Promise<CategoryDto> {
-    return this.repository.create(data.categoryName);
+  async findTopLevelCategories(): Promise<ICategory[]> {
+    return await this.categoryRepository.findTopLevelCategory();
+  }
+
+  async findSubCategories(parentId: string): Promise<ICategory[]> {
+    return await this.categoryRepository.findSubCategor(parentId);
+  }
+
+  async findCategoryBySlug(slug: string): Promise<ICategory | null> {
+    return await this.categoryRepository.findBySlub(slug);
+  }
+
+  async findAllActiveCategories(): Promise<ICategory[] | null> {
+    return await this.categoryRepository.findAllActiveCategory();
+  }
+
+  async findAllSortedCategories(): Promise<ICategory[]> {
+    return await this.categoryRepository.findAllSortedCategory();
+  }
+
+  async findCategoryWithSubCategories(
+    parentId: string,
+  ): Promise<{ parent: ICategory | null; subCategories: ICategory[] }> {
+    return await this.categoryRepository.findCategoryWithSubCategories(
+      parentId,
+    );
   }
 
   async updateCategory(
-    categoryId: string,
-    data: UpdateCategoryDto,
-  ): Promise<CategoryDto> {
-    const category = await this.repository.update(categoryId, data);
-    if (!category) {
-      throw new Error('Category not found');
-    }
-    return category;
+    id: string,
+    data: Partial<ICategory>,
+  ): Promise<ICategory | null> {
+    return await this.categoryRepository.update(id, data);
   }
 
-  async deleteCategory(categoryId: string): Promise<void> {
-    const success = await this.repository.delete(categoryId);
-    if (!success) {
-      throw new Error('Category not found');
-    }
+  async inactivateCategory(id: string): Promise<ICategory | null> {
+    return await this.categoryRepository.inActiveCategory(id);
   }
 
-  async getCategoryAttributes(
-    categoryId: string,
-  ): Promise<CategoryAttributeDto[]> {
-    // Verify category exists
-    await this.getCategoryById(categoryId);
-    return this.repository.getCategoryAttributes(categoryId);
+  async activateCategory(id: string): Promise<ICategory | null> {
+    return await this.categoryRepository.activeCategory(id);
   }
 
-  async addCategoryAttribute(
-    categoryId: string,
-    data: AddCategoryAttributeDto,
-  ): Promise<CategoryAttributeDto> {
-    // Verify category exists
-    await this.getCategoryById(categoryId);
-    return this.repository.addCategoryAttribute(categoryId, data.attributeId);
+  async updateCategorySortOrder(
+    id: string,
+    sortOrder: number,
+  ): Promise<ICategory | null> {
+    return await this.categoryRepository.updateSortOrder(id, sortOrder);
   }
 
-  async removeCategoryAttribute(
-    categoryId: string,
-    attributeId: string,
-  ): Promise<void> {
-    const success = await this.repository.removeCategoryAttribute(
-      categoryId,
-      attributeId,
-    );
-    if (!success) {
-      throw new Error('Category attribute not found');
-    }
+  async hasSubCategories(id: string): Promise<boolean> {
+    return await this.categoryRepository.hadSubCategory(id);
   }
 }

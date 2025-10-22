@@ -1,49 +1,60 @@
 import { Router } from 'express';
 import { CategoryController } from '../controller/category.controller';
-import { authenticate } from '@/middlewares/auth.middleware';
-import { authorize } from '@/middlewares/authorize.middleware';
+import { CategoryRepository } from '../repository/category.repository';
+import Category from '../schema/category.schema';
+import { CategoryService } from '../service/category.service';
+import upload, { uploadSingleImage } from '../../../middlewares/upload/upload';
 
-const router = Router();
-const controller = new CategoryController();
+const categoryRouter = Router();
 
-// Public routes
-router.get('/', controller.getAllCategories.bind(controller));
-router.get('/:categoryId', controller.getCategoryById.bind(controller));
-router.get(
-  '/:categoryId/attributes',
-  controller.getCategoryAttributes.bind(controller),
+// Khởi tạo các lớp
+const categoryRepository = new CategoryRepository(Category);
+const categoryService = new CategoryService(categoryRepository);
+const categoryController = new CategoryController(categoryService);
+
+// Định nghĩa các route
+categoryRouter.post('/', uploadSingleImage, (req, res, next) => {
+  categoryController.createCategory(req, res, next);
+});
+
+categoryRouter.get('/', (req, res, next) =>
+  categoryController.findAllCategories(req, res, next),
+);
+categoryRouter.get('/top-level', (req, res, next) =>
+  categoryController.findTopLevelCategories(req, res, next),
+);
+categoryRouter.get('/sub-categories/:parentId', (req, res, next) =>
+  categoryController.findSubCategories(req, res, next),
+);
+categoryRouter.get('/slug/:slug', (req, res, next) =>
+  categoryController.findCategoryBySlug(req, res, next),
+);
+categoryRouter.get('/active', (req, res, next) =>
+  categoryController.findAllActiveCategories(req, res, next),
+);
+categoryRouter.get('/sorted', (req, res, next) =>
+  categoryController.findAllSortedCategories(req, res, next),
+);
+categoryRouter.get('/with-sub-categories/:parentId', (req, res, next) =>
+  categoryController.findCategoryWithSubCategories(req, res, next),
+);
+categoryRouter.put('/:id', uploadSingleImage, (req, res, next) =>
+  categoryController.updateCategory(req, res, next),
+);
+categoryRouter.patch('/:id/inactivate', (req, res, next) =>
+  categoryController.inactivateCategory(req, res, next),
+);
+categoryRouter.patch('/:id/activate', (req, res, next) =>
+  categoryController.activateCategory(req, res, next),
+);
+categoryRouter.patch('/:id/sort-order', (req, res, next) =>
+  categoryController.updateCategorySortOrder(req, res, next),
+);
+categoryRouter.get('/:id/has-sub-categories', (req, res, next) =>
+  categoryController.hasSubCategories(req, res, next),
+);
+categoryRouter.get('/:id', (req, res, next) =>
+  categoryController.findCategoryById(req, res, next),
 );
 
-// Protected routes - require authentication and authorization
-router.post(
-  '/',
-  authenticate,
-  authorize(['admin']),
-  controller.createCategory.bind(controller),
-);
-router.put(
-  '/:categoryId',
-  authenticate,
-  authorize(['admin']),
-  controller.updateCategory.bind(controller),
-);
-router.delete(
-  '/:categoryId',
-  authenticate,
-  authorize(['admin']),
-  controller.deleteCategory.bind(controller),
-);
-router.post(
-  '/:categoryId/attributes',
-  authenticate,
-  authorize(['admin']),
-  controller.addCategoryAttribute.bind(controller),
-);
-router.delete(
-  '/:categoryId/attributes/:attributeId',
-  authenticate,
-  authorize(['admin']),
-  controller.removeCategoryAttribute.bind(controller),
-);
-
-export default router;
+export default categoryRouter;

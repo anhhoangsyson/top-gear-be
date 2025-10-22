@@ -1,4 +1,4 @@
-import { Iblog, creatblog } from '../dto/blog.dto';
+import { Iblog, ICreatblog } from '../dto/blog.dto';
 import { Blog } from '../schema/blog.schema';
 
 export class BlogiesRepository {
@@ -6,7 +6,7 @@ export class BlogiesRepository {
     return await Blog.find();
   }
 
-  async createBlog(blogData: Partial<creatblog>): Promise<creatblog> {
+  async createBlog(blogData: Partial<ICreatblog>): Promise<ICreatblog> {
     const blog = new Blog(blogData);
     // return await Blog.save();
     return await blog.save();
@@ -24,5 +24,15 @@ export class BlogiesRepository {
     return await Blog.findByIdAndUpdate(id, datablog, {
       new: true,
     });
+  }
+
+  async getBlogBySlug(slug: string): Promise<Iblog> {
+    const blog = await Blog.findOne({ slug: slug })
+      .populate({ path: 'userId', select: 'fullname' })
+      .lean();
+    if (!blog) {
+      throw new Error('Blog not found');
+    }
+    return blog;
   }
 }

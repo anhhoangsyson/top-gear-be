@@ -6,9 +6,9 @@ const getAccessToken = (_id: mongoose.Types.ObjectId, role: string) => {
   });
 };
 
-const getRefeshToken = (_id: mongoose.Types.ObjectId, role: string) => {
+const getRefreshToken = (_id: mongoose.Types.ObjectId, role: string) => {
   return jwt.sign({ _id, role }, process.env.JWT_REFESH_SECREt as string, {
     expiresIn: '70d',
   });
 };
-export { getAccessToken, getRefeshToken };
+export { getAccessToken, getRefreshToken };

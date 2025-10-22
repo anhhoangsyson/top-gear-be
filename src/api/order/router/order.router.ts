@@ -50,4 +50,5 @@ orderRouter.patch('/change-order-status/:id', (req, res) => {
 orderRouter.get('/orderDetail/:id', (req, res) => {
   orderController.getOrderDetailsById(req, res);
 });
+
 export default orderRouter;

@@ -4,14 +4,15 @@ const connectDatabase = async () => {
   const connectWithRetry = async () => {
     try {
       await mongoose.connect(
-        `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@database.rylr1.mongodb.net/?retryWrites=true&w=majority&appName=database`,
+        `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster-ecom-cho-be-tai.nwdiimc.mongodb.net/ecomerce-top-gear`,
+        // process.env.MONGO_URI + '',
         {
           serverSelectionTimeoutMS: 5000,
           socketTimeoutMS: 4500,
         },
       );
       console.log(
-        `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@database.rylr1.mongodb.net/?retryWrites=true&w=majority&appName=database`,
+        `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster-ecom-cho-be-tai.nwdiimc.mongodb.net/?retryWrites=true&w=majority&appName=database`,
       );
 
       console.log('Connected mongodb thành công');

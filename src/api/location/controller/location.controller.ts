@@ -29,8 +29,10 @@ export class LocationController {
   async createLocation(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user._id;
+      console.log('data pass', req.body);
 
       const locationData = new CreateLocationDTO(req.body);
+      console.log('data from fe', locationData);
       const newLocation = await this.locationService.createLocation(
         userId,
         locationData,

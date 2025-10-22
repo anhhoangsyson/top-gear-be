@@ -1,19 +1,20 @@
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 export interface Iblog {
-  name: string;
+  title: string;
   content: string;
-  users_id: mongoose.Schema.Types.ObjectId;
-  images: string;
-  createAt: Date;
-  updateAt: Date;
+  userId: Types.ObjectId;
+  tags: string[];
+  thumbnail: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface creatblog {
-  name: string;
+export interface ICreatblog {
+  title: string;
   content: string;
-  users_id: mongoose.Schema.Types.ObjectId;
-  images: string;
-  createAt: Date;
-  updateAt: Date;
+  userId: Types.ObjectId;
+  tags: string[];
+  thumbnail: string;
 }

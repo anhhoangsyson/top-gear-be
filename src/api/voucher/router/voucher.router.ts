@@ -1,25 +1,22 @@
 import { Router } from 'express';
-import { VoucherController } from '../controller/voucher.controller'; // Ensure you have created the file vouchers.controller.ts
-const vouchersRouter = Router();
-const vouchersController = new VoucherController();
-// Get all vouchers
-vouchersRouter.get('/', (req, res) => {
-  vouchersController.getAllVouchers(req, res);
-});
-// Create a new voucher
-vouchersRouter.post('/', (req, res) => {
-  vouchersController.createVoucher(req, res);
-});
-// Get a voucher by ID
-vouchersRouter.get('/:id', (req, res) => {
-  vouchersController.getVoucherById(req, res);
-});
-// Delete a voucher by ID
-vouchersRouter.delete('/:id', (req, res) => {
-  vouchersController.deleteVoucherById(req, res);
-});
-// Update a voucher by ID
-vouchersRouter.patch('/:id', (req, res) => {
-  vouchersController.updateVoucherById(req, res);
-});
-export default vouchersRouter;
+import { VoucherController } from '../controller/voucher.controller';
+
+const voucherRouter = Router();
+const controller = new VoucherController();
+
+// CRUD cho admin
+voucherRouter.get('/', (req, res) => controller.getAll(req, res));
+voucherRouter.post('/', (req, res) => controller.create(req, res));
+voucherRouter.get('/:id', (req, res) => controller.getById(req, res));
+voucherRouter.patch('/:id', (req, res) => controller.update(req, res));
+voucherRouter.delete('/:id', (req, res) => controller.delete(req, res));
+
+// API cho khách hàng
+voucherRouter.get('/customer/available', (req, res) =>
+  controller.getAvailable(req, res),
+);
+voucherRouter.post('/customer/apply', (req, res) =>
+  controller.applyCode(req, res),
+);
+
+export default voucherRouter;

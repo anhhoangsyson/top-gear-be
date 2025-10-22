@@ -4,8 +4,6 @@ import { Redis } from 'ioredis';
 dotenv.config();
 
 let redisClient: Redis | null;
-console.log('REDIS_HOST:', process.env.REDIS_HOST);
-console.log('REDIS_PORT:', process.env.REDIS_PORT);
 console.log(
   'REDIS_PASSWORD:',
   process.env.REDIS_PASSWORD ? 'Có dữ liệu' : 'Không có dữ liệu',
