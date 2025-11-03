@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
+import http from 'http';
 import connectDatabase from './config/database/database.config';
 import usersRouter from './api/users/router/users.router';
 import menusRouter from './api/menus/router/menus.router';
@@ -21,6 +22,7 @@ import productImageRouter from './api/produductImage/router/productImage.router'
 import locationRouter from './api/location/route/location.router';
 import vouchersRouter from './api/voucher/router/voucher.router';
 import brandRoute from './api/brand/router/brand.router';
+import notificationRouter from './api/notification/router/notification.router';
 const cors = require('cors');
 dotenv.config();
 import './config/passport/passport.config';
@@ -31,8 +33,10 @@ import laptopRouter from './api/laptop/router/laptop.router';
 import laptopGroupRouter from './api/laptop-group/router/laptop-group.router';
 import dashboardRouter from './api/dashboard/dashboard.router';
 import jwt from 'jsonwebtoken';
+import socketService from './services/socket/socket.service';
 
 const app = express();
+const server = http.createServer(app);
 app.use(
   cors({
     credentials: true,
@@ -50,6 +54,9 @@ app.set('views', path.join(__dirname, './views'));
 app.use(passport.initialize());
 connectDatabase();
 connectRedis();
+
+// Initialize Socket.io
+socketService.initialize(server);
 app.get('/', (req: Request, res: Response) => {
   res.send('taideptrai1901');
 });
@@ -75,8 +82,10 @@ app.use('/api/v1/category', categoryRouter);
 app.use('/api/v1/laptop', laptopRouter);
 app.use('/api/v1/laptop-group', laptopGroupRouter);
 app.use('/api/v1/admin/dashboard', dashboardRouter);
+app.use('/api/v1/notifications', notificationRouter);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server đang chạy ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server đang chạy tại port ${PORT}`);
+  console.log(`📡 Socket.IO ready for realtime notifications`);
 });

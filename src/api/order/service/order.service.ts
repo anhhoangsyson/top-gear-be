@@ -6,10 +6,24 @@ import { PaymentService } from './payment.service';
 import Order from '../schema/order.schema';
 import { Types } from 'mongoose';
 import Laptop from '../../laptop/schema/laptop.schema';
+import notificationService from '../../notification/service/notification.service';
+import { notifyOrderStatusChanged } from '../../../middlewares/notification/notification.middleware';
+import { Users } from '../../users/schema/user.schema';
 
 export default class OrderService {
   private orderRepository = new OrderRepository();
   private paymentService = new PaymentService();
+
+  // Helper function để lấy danh sách admin
+  private async getAdminUserIds(): Promise<string[]> {
+    try {
+      const admins = await Users.find({ role: 'admin' }).select('_id');
+      return admins.map((admin) => admin._id.toString());
+    } catch (error) {
+      console.error('Failed to get admin users:', error);
+      return [];
+    }
+  }
   async createOrder(
     createOrderData: CreateOrderDto,
     customerId: string,
@@ -85,6 +99,49 @@ export default class OrderService {
       $set: { orderDetails: orderDetailIds },
     });
 
+    // ✅ Gửi notification cho khách hàng
+    notificationService
+      .createNotification({
+        userId: customerId,
+        type: 'order',
+        title: '🎉 Đơn hàng đã được tạo!',
+        message: `Đơn hàng #${order._id} của bạn đã được tạo thành công với tổng giá trị ${(subTotal - discountAmount).toLocaleString('vi-VN')}đ`,
+        data: {
+          orderId: order._id,
+          totalAmount: subTotal - discountAmount,
+          orderStatus: intiialStatus,
+          paymentMethod,
+        },
+        link: `/orders/${order._id}`,
+      })
+      .catch((err) => console.error('Failed to send notification:', err));
+
+    // ✅ Gửi notification cho tất cả admin
+    const adminIds = await this.getAdminUserIds();
+    if (adminIds.length > 0) {
+      const adminNotifications = adminIds.map((adminId) => ({
+        userId: adminId,
+        type: 'order' as const,
+        title: '📦 Đơn hàng mới',
+        message: `Có đơn hàng mới #${order._id} với giá trị ${(subTotal - discountAmount).toLocaleString('vi-VN')}đ cần xử lý`,
+        data: {
+          orderId: order._id,
+          customerId,
+          totalAmount: subTotal - discountAmount,
+          orderStatus: intiialStatus,
+          paymentMethod,
+          priority: subTotal - discountAmount > 20000000 ? 'high' : 'normal',
+        },
+        link: `/admin/orders/${order._id}`,
+      }));
+
+      notificationService
+        .createBulkNotifications(adminNotifications)
+        .catch((err) =>
+          console.error('Failed to send admin notifications:', err),
+        );
+    }
+
     // handle case paymentMethod
 
     if (paymentMethod === PaymentMethod.CASH) {
@@ -133,15 +190,92 @@ export default class OrderService {
   }
 
   async cancelingOrder(id: string) {
-    return await this.orderRepository.cancelingOrder(id);
+    const order = await this.orderRepository.cancelingOrder(id);
+
+    // ✅ Gửi notification khi đơn hàng bị hủy
+    if (
+      order &&
+      typeof order === 'object' &&
+      'customerId' in order &&
+      order.customerId
+    ) {
+      notificationService
+        .createNotification({
+          userId: order.customerId.toString(),
+          type: 'order',
+          title: '❌ Đơn hàng đang được hủy',
+          message: `Đơn hàng #${id} của bạn đang trong quá trình hủy`,
+          data: { orderId: id, status: 'canceling' },
+          link: `/orders/${id}`,
+        })
+        .catch((err) => console.error('Failed to send notification:', err));
+    }
+
+    return order;
   }
 
   async canceledOrder(id: string) {
-    return await this.orderRepository.canceledOrder(id);
+    const order = await this.orderRepository.canceledOrder(id);
+
+    // ✅ Gửi notification khi đơn hàng đã hủy
+    if (order && order.customerId) {
+      notificationService
+        .createNotification({
+          userId: order.customerId.toString(),
+          type: 'order',
+          title: '❌ Đơn hàng đã bị hủy',
+          message: `Đơn hàng #${id} của bạn đã bị hủy thành công`,
+          data: { orderId: id, status: 'cancelled' },
+          link: `/orders/${id}`,
+        })
+        .catch((err) => console.error('Failed to send notification:', err));
+
+      // ✅ Thông báo cho admin
+      const adminIds = await this.getAdminUserIds();
+      if (adminIds.length > 0) {
+        const adminNotifications = adminIds.map((adminId) => ({
+          userId: adminId,
+          type: 'order' as const,
+          title: '🔔 Đơn hàng đã bị hủy',
+          message: `Đơn hàng #${id} đã bị hủy bởi khách hàng`,
+          data: { orderId: id, status: 'cancelled' },
+          link: `/admin/orders/${id}`,
+        }));
+
+        notificationService
+          .createBulkNotifications(adminNotifications)
+          .catch((err) =>
+            console.error('Failed to send admin notifications:', err),
+          );
+      }
+    }
+
+    return order;
   }
 
   async compeletedOrder(id: string) {
-    return await this.orderRepository.compeleteOrder(id);
+    const order = await this.orderRepository.compeleteOrder(id);
+
+    // ✅ Gửi notification khi đơn hàng hoàn thành
+    if (
+      order &&
+      typeof order === 'object' &&
+      'customerId' in order &&
+      order.customerId
+    ) {
+      notificationService
+        .createNotification({
+          userId: order.customerId.toString(),
+          type: 'order',
+          title: '🎉 Giao hàng thành công!',
+          message: `Đơn hàng #${id} đã được giao thành công. Cảm ơn bạn đã mua hàng tại Top Gear!`,
+          data: { orderId: id, status: 'completed', canReview: true },
+          link: `/orders/${id}`,
+        })
+        .catch((err) => console.error('Failed to send notification:', err));
+    }
+
+    return order;
   }
 
   async changeOrderStatus(status: string, id: string) {
@@ -164,6 +298,34 @@ export default class OrderService {
         }
       }
     }
+
+    // ✅ Gửi notification khi trạng thái đơn hàng thay đổi
+    if (order && order.customerId) {
+      const statusMessages: { [key: string]: string } = {
+        pending: 'đang chờ xử lý',
+        confirmed: 'đã được xác nhận',
+        processing: 'đang được xử lý',
+        shipping: 'đang được giao',
+        completed: 'đã được giao thành công',
+        cancelled: 'đã bị hủy',
+        payment_pending: 'đang chờ thanh toán',
+      };
+
+      const statusEmojis: { [key: string]: string } = {
+        confirmed: '✅',
+        processing: '📦',
+        shipping: '🚚',
+        completed: '🎉',
+        cancelled: '❌',
+      };
+
+      notifyOrderStatusChanged(
+        order.customerId.toString(),
+        id,
+        statusMessages[status] || status,
+      ).catch((err) => console.error('Failed to send notification:', err));
+    }
+
     return order;
   }
 
