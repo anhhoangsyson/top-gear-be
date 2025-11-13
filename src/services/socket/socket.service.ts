@@ -1,6 +1,9 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
+import connectRedis from '../../config/redis/redis.config';
+import { Users } from '../../api/users/schema/user.schema';
+import { getAccessToken } from '../../middlewares/token/createToken';
 
 interface UserSocket {
   userId: string;
@@ -31,7 +34,7 @@ class SocketService {
       console.log(`🔌 New socket connection: ${socket.id}`);
 
       // Authentication
-      socket.on('authenticate', (token: string) => {
+      socket.on('authenticate', async (token: string) => {
         try {
           const decoded = jwt.verify(
             token,
@@ -52,9 +55,96 @@ class SocketService {
             );
             socket.emit('authenticated', { userId });
           }
-        } catch (error) {
-          console.error('❌ Authentication error:', error);
-          socket.emit('authentication_error', { message: 'Invalid token' });
+        } catch (error: any) {
+          // Handle token expiration - try to refresh token
+          if (error.name === 'TokenExpiredError') {
+            try {
+              const decoded = (jwt.decode(token) as any) || null;
+
+              if (!decoded || !decoded._id) {
+                console.error('❌ Token expired and cannot decode');
+                socket.emit('authentication_error', {
+                  message: 'Token hết hạn và không thể giải mã',
+                  code: 'TOKEN_EXPIRED',
+                  expiredAt: error.expiredAt,
+                });
+                return;
+              }
+
+              // Check Redis for refresh token
+              const redisClient = connectRedis();
+              const storedRefreshToken = await redisClient.get(decoded._id);
+
+              if (!storedRefreshToken) {
+                console.error('❌ Token expired and no refresh token found');
+                socket.emit('authentication_error', {
+                  message: 'Token hết hạn, vui lòng đăng nhập lại',
+                  code: 'TOKEN_EXPIRED_NO_REFRESH',
+                  expiredAt: error.expiredAt,
+                });
+                return;
+              }
+
+              // Verify refresh token
+              try {
+                const refreshDecoded = jwt.verify(
+                  storedRefreshToken,
+                  process.env.JWT_REFESH_SECREt || '',
+                ) as any;
+
+                // Get user from database
+                const user = await Users.findOne({ _id: decoded._id });
+                if (!user) {
+                  socket.emit('authentication_error', {
+                    message: 'Người dùng không tồn tại',
+                    code: 'USER_NOT_FOUND',
+                  });
+                  return;
+                }
+
+                // Generate new access token
+                const newToken = getAccessToken(user._id, user.role);
+                const userId = user._id.toString();
+
+                // Add socket to user's socket list
+                const existingSockets = this.userSockets.get(userId) || [];
+                this.userSockets.set(userId, [...existingSockets, socket.id]);
+
+                socket.data.userId = userId;
+                socket.join(`user:${userId}`);
+
+                console.log(
+                  `✅ User ${userId} authenticated with refreshed token on socket ${socket.id}`,
+                );
+
+                // Emit authenticated with new token
+                socket.emit('authenticated', {
+                  userId,
+                  newToken, // Send new token to frontend
+                });
+              } catch (refreshError) {
+                console.error('❌ Refresh token invalid:', refreshError);
+                socket.emit('authentication_error', {
+                  message: 'Refresh token không hợp lệ, vui lòng đăng nhập lại',
+                  code: 'REFRESH_TOKEN_INVALID',
+                });
+              }
+            } catch (decodeError) {
+              console.error('❌ Token decode error:', decodeError);
+              socket.emit('authentication_error', {
+                message: 'Token không hợp lệ',
+                code: 'TOKEN_INVALID',
+              });
+            }
+          } else {
+            // Other JWT errors
+            console.error('❌ Authentication error:', error.message);
+            socket.emit('authentication_error', {
+              message: 'Token không hợp lệ',
+              code: 'TOKEN_INVALID',
+              error: error.message,
+            });
+          }
         }
       });
 

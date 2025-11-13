@@ -2,7 +2,15 @@ import { z } from 'zod';
 
 export const createNotificationSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
-  type: z.enum(['order', 'comment', 'like', 'system', 'product', 'promotion']),
+  type: z.enum([
+    'order',
+    'comment',
+    'like',
+    'system',
+    'product',
+    'promotion',
+    'rating',
+  ]),
   title: z.string().min(1, 'Title is required'),
   message: z.string().min(1, 'Message is required'),
   data: z.any().optional(),
@@ -18,7 +26,15 @@ export const getNotificationsQuerySchema = z.object({
   limit: z.string().optional().default('20'),
   isRead: z.enum(['true', 'false']).optional(),
   type: z
-    .enum(['order', 'comment', 'like', 'system', 'product', 'promotion'])
+    .enum([
+      'order',
+      'comment',
+      'like',
+      'system',
+      'product',
+      'promotion',
+      'rating',
+    ])
     .optional(),
 });
 

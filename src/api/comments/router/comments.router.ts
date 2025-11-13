@@ -1,27 +1,84 @@
 import { Router } from 'express';
 import { CommentsController } from '../controller/comments.controller';
+import authenticateJWT from '../../../middlewares/authenticate/authenticateJWT';
+import checkAdmin from '../../../middlewares/authenticate/checkAdmin';
 
-const commentsRouter = Router(); // Đổi tên router thành commentsRouter
-const commentsController = new CommentsController(); // Khởi tạo CommentsController
+const commentsRouter = Router();
+const commentsController = new CommentsController();
 
-commentsRouter.get('/', (req, res) => {
-  commentsController.getAllComments(req, res); // Gọi phương thức lấy tất cả bình luận
-});
+// Public routes
+commentsRouter.get(
+  '/',
+  commentsController.getAllComments.bind(commentsController),
+);
+commentsRouter.get(
+  '/:id',
+  commentsController.getCommentById.bind(commentsController),
+);
 
-commentsRouter.post('/', (req, res) => {
-  commentsController.createComment(req, res); // Gọi phương thức tạo bình luận
-});
+// Blog comments (public)
+commentsRouter.get(
+  '/blog/:blogId',
+  commentsController.getCommentsByBlog.bind(commentsController),
+);
 
-commentsRouter.get('/:id', (req, res) => {
-  commentsController.getCommentById(req, res); // Gọi phương thức lấy bình luận theo ID
-});
+// Authenticated routes
+commentsRouter.post(
+  '/',
+  authenticateJWT,
+  commentsController.createComment.bind(commentsController),
+);
 
-commentsRouter.delete('/:id', (req, res) => {
-  commentsController.deleteCommentById(req, res); // Gọi phương thức xóa bình luận theo ID
-});
+commentsRouter.patch(
+  '/:id',
+  authenticateJWT,
+  commentsController.updateCommentById.bind(commentsController),
+);
 
-commentsRouter.patch('/:id', (req, res) => {
-  commentsController.updateCommentById(req, res); // Gọi phương thức cập nhật bình luận theo ID
-});
+commentsRouter.delete(
+  '/:id',
+  authenticateJWT,
+  commentsController.deleteCommentById.bind(commentsController),
+);
 
-export default commentsRouter; // Xuất router
+// User's own comments
+commentsRouter.get(
+  '/user/my-comments',
+  authenticateJWT,
+  commentsController.getCommentsByUser.bind(commentsController),
+);
+
+// ========== ADMIN ROUTES ==========
+// Get all comments with filters (Admin only)
+commentsRouter.get(
+  '/admin/all',
+  authenticateJWT,
+  checkAdmin,
+  commentsController.getAllCommentsWithFilters.bind(commentsController),
+);
+
+// Approve comment (Admin only)
+commentsRouter.patch(
+  '/admin/:id/approve',
+  authenticateJWT,
+  checkAdmin,
+  commentsController.approveComment.bind(commentsController),
+);
+
+// Reject comment (Admin only)
+commentsRouter.patch(
+  '/admin/:id/reject',
+  authenticateJWT,
+  checkAdmin,
+  commentsController.rejectComment.bind(commentsController),
+);
+
+// Get comment stats (Admin only)
+commentsRouter.get(
+  '/admin/stats',
+  authenticateJWT,
+  checkAdmin,
+  commentsController.getCommentStats.bind(commentsController),
+);
+
+export default commentsRouter;

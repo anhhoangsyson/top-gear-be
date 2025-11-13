@@ -23,6 +23,8 @@ import locationRouter from './api/location/route/location.router';
 import vouchersRouter from './api/voucher/router/voucher.router';
 import brandRoute from './api/brand/router/brand.router';
 import notificationRouter from './api/notification/router/notification.router';
+import ratingRouter from './api/rating/router/rating.router';
+import wishlistRouter from './api/wishlist/router/wishlist.router';
 const cors = require('cors');
 dotenv.config();
 import './config/passport/passport.config';
@@ -83,6 +85,8 @@ app.use('/api/v1/laptop', laptopRouter);
 app.use('/api/v1/laptop-group', laptopGroupRouter);
 app.use('/api/v1/admin/dashboard', dashboardRouter);
 app.use('/api/v1/notifications', notificationRouter);
+app.use('/api/v1/ratings', ratingRouter);
+app.use('/api/v1/wishlist', wishlistRouter);
 app.use(errorHandler);
 
 server.listen(PORT, () => {

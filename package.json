@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "prepare": "husky",
+    "start": "node index.ts",
     "format": "prettier --write 'src/**/*.{js,ts,json,md}'",
     "lint": "eslint --fix src/index.ts test/example.test.ts",
     "test": "jest",

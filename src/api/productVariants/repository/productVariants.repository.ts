@@ -303,6 +303,105 @@ export const ProductVariantsRepository = {
     );
   },
 
+  // Search products with full-text search
+  async searchVariants(
+    keyword: string,
+    skip: number,
+    limit: number,
+    filters?: {
+      minPrice?: number;
+      maxPrice?: number;
+      categories?: string[];
+      status?: string;
+    },
+  ) {
+    const matchStage: any = {
+      $text: { $search: keyword },
+      status: StatusProductVariant.ACTIVE, // Only show active products
+    };
+
+    // Apply filters
+    if (filters) {
+      if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+        matchStage.variantPriceSale = {};
+        if (filters.minPrice !== undefined)
+          matchStage.variantPriceSale.$gte = filters.minPrice;
+        if (filters.maxPrice !== undefined)
+          matchStage.variantPriceSale.$lte = filters.maxPrice;
+      }
+      if (filters.categories && filters.categories.length > 0) {
+        matchStage.filterCategories = { $in: filters.categories };
+      }
+      if (filters.status) {
+        matchStage.status = filters.status;
+      }
+    }
+
+    const results = await ProductVariants.aggregate([
+      { $match: matchStage },
+      { $addFields: { score: { $meta: 'textScore' } } },
+      { $sort: { score: -1 } },
+      {
+        $lookup: {
+          from: 'productimages',
+          localField: '_id',
+          foreignField: 'productVariantId',
+          as: 'images',
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          variantName: 1,
+          variantPrice: 1,
+          variantPriceSale: 1,
+          variantStock: 1,
+          filterCategories: 1,
+          status: 1,
+          score: 1,
+          image: { $arrayElemAt: ['$images.imageUrl', 0] },
+        },
+      },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+
+    const totalMatch = await ProductVariants.countDocuments(matchStage);
+
+    return { results, total: totalMatch };
+  },
+
+  // Autocomplete search - lightweight and fast
+  async autocompleteVariants(keyword: string, limit: number = 5) {
+    const regex = new RegExp(keyword, 'i'); // Case-insensitive regex
+
+    return await ProductVariants.aggregate([
+      {
+        $match: {
+          variantName: regex,
+          status: StatusProductVariant.ACTIVE,
+        },
+      },
+      {
+        $lookup: {
+          from: 'productimages',
+          localField: '_id',
+          foreignField: 'productVariantId',
+          as: 'images',
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          variantName: 1,
+          variantPriceSale: 1,
+          image: { $arrayElemAt: ['$images.imageUrl', 0] },
+        },
+      },
+      { $limit: limit },
+    ]);
+  },
+
   async getProductVariantsRelated(productVariantId: string) {
     const result = await ProductVariants.aggregate([
       // Bước 1: Tìm biến thể hiện tại để lấy productId

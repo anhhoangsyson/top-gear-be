@@ -37,11 +37,11 @@ export class VoucherController {
 
   // Khách hàng áp dụng voucher code
   async applyCode(req: Request, res: Response) {
-    const { code } = req.body;
-    console.log(`Applying voucher code: ${code}`);
+    const { code, orderAmount } = req.body;
+    console.log(`Applying voucher code: ${code}, orderAmount: ${orderAmount}`);
 
     try {
-      const result = await voucherService.applyVoucherCode(code);
+      const result = await voucherService.applyVoucherCode(code, orderAmount);
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

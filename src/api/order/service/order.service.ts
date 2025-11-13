@@ -4,15 +4,17 @@ import { Voucher } from '../../voucher/schema/voucher.schema';
 import { OrderStatus } from '../schema/order.schema';
 import { PaymentService } from './payment.service';
 import Order from '../schema/order.schema';
-import { Types } from 'mongoose';
+import { Types, startSession } from 'mongoose';
 import Laptop from '../../laptop/schema/laptop.schema';
 import notificationService from '../../notification/service/notification.service';
 import { notifyOrderStatusChanged } from '../../../middlewares/notification/notification.middleware';
 import { Users } from '../../users/schema/user.schema';
+import { VoucherService } from '../../voucher/service/voucher.service';
 
 export default class OrderService {
   private orderRepository = new OrderRepository();
   private paymentService = new PaymentService();
+  private voucherService = new VoucherService();
 
   // Helper function để lấy danh sách admin
   private async getAdminUserIds(): Promise<string[]> {
@@ -36,25 +38,28 @@ export default class OrderService {
     );
 
     let discountAmount = 0;
-    console.log('voucehrid', voucherId);
+    console.log('📊 Order Details:', {
+      voucherId,
+      subTotal,
+      subTotalType: typeof subTotal,
+      cartItem: cartItem.map((item) => ({
+        id: item._id,
+        price: item.discountPrice,
+        quantity: item.quantity,
+        total: item.discountPrice * item.quantity,
+      })),
+    });
 
-    if (voucherId) {
-      const voucher = await Voucher.findById(new Types.ObjectId(voucherId));
-      console.log('voucher', voucher);
-
-      if (!voucher) throw new Error('Voucher không tồn tại');
-      if (new Date(voucher.expiredDate) < new Date())
-        throw new Error('Voucher đã hết hạn');
-      if (voucher.status !== 'active') throw new Error('Voucher không hợp lệ');
-
-      if (voucher.pricePercent > 0) {
-        // Giảm theo %
-        discountAmount = Math.floor(subTotal * (voucher.pricePercent / 100));
-        // Nếu có giới hạn số tiền giảm tối đa
-      } else if (voucher.priceOrigin > 0) {
-        // Giảm số tiền cố định
-        discountAmount = voucher.priceOrigin;
-        if (discountAmount > subTotal) discountAmount = subTotal;
+    // ✅ 1. Check stock availability trước khi tạo order
+    for (const item of cartItem) {
+      const laptop = await Laptop.findById(item._id);
+      if (!laptop) {
+        throw new Error(`Sản phẩm ${item._id} không tồn tại`);
+      }
+      if (laptop.stock < item.quantity) {
+        throw new Error(
+          `Sản phẩm "${laptop.name}" không đủ hàng. Hiện có: ${laptop.stock}, yêu cầu: ${item.quantity}`,
+        );
       }
     }
 
@@ -66,110 +71,188 @@ export default class OrderService {
     console.log('discountAmount', discountAmount);
     console.log('totalAmount', subTotal - discountAmount);
 
-    const orderData = {
-      customerId,
-      totalAmount: subTotal - discountAmount,
-      orderStatus: intiialStatus,
-      address,
-      discountAmount,
-      voucherId,
-      paymentMethod,
-      orderDetails: [], // Chưa có chi tiết đơn hàng tại thời điểm này
-      note: note || '',
-    };
+    // ✅ 2. Use MongoDB Transaction để đảm bảo atomicity
+    const session = await startSession();
+    session.startTransaction();
 
-    const order = (await this.orderRepository.createOrder(orderData)) as {
-      _id: string;
-      [key: string]: any;
-    };
-
-    const orderDetailsData = cartItem.map((item) => ({
-      laptopId: new Types.ObjectId(item._id),
-      quantity: item.quantity,
-      price: item.discountPrice,
-      subTotal: item.quantity * item.discountPrice,
-    }));
-
-    const createOrderDetails =
-      await this.orderRepository.createOrderDetail(orderDetailsData);
-    const orderDetailIds = createOrderDetails.map((item) => item._id);
-
-    // await this.orderRepository.updateStatus(order._id as string, intiialStatus, undefined, undefined) // Gọi để lấy lại order
-    await Order.findByIdAndUpdate(order._id, {
-      $set: { orderDetails: orderDetailIds },
-    });
-
-    // ✅ Gửi notification cho khách hàng
-    notificationService
-      .createNotification({
-        userId: customerId,
-        type: 'order',
-        title: '🎉 Đơn hàng đã được tạo!',
-        message: `Đơn hàng #${order._id} của bạn đã được tạo thành công với tổng giá trị ${(subTotal - discountAmount).toLocaleString('vi-VN')}đ`,
-        data: {
-          orderId: order._id,
-          totalAmount: subTotal - discountAmount,
-          orderStatus: intiialStatus,
-          paymentMethod,
-        },
-        link: `/orders/${order._id}`,
-      })
-      .catch((err) => console.error('Failed to send notification:', err));
-
-    // ✅ Gửi notification cho tất cả admin
-    const adminIds = await this.getAdminUserIds();
-    if (adminIds.length > 0) {
-      const adminNotifications = adminIds.map((adminId) => ({
-        userId: adminId,
-        type: 'order' as const,
-        title: '📦 Đơn hàng mới',
-        message: `Có đơn hàng mới #${order._id} với giá trị ${(subTotal - discountAmount).toLocaleString('vi-VN')}đ cần xử lý`,
-        data: {
-          orderId: order._id,
+    try {
+      // ✅ 2.1. Validate và reserve voucher TRONG transaction (nếu có)
+      if (voucherId) {
+        const result = await this.voucherService.validateAndReserveVoucher(
+          voucherId,
           customerId,
-          totalAmount: subTotal - discountAmount,
-          orderStatus: intiialStatus,
-          paymentMethod,
-          priority: subTotal - discountAmount > 20000000 ? 'high' : 'normal',
-        },
-        link: `/admin/orders/${order._id}`,
+          subTotal,
+          session,
+        );
+        discountAmount = result.discountAmount;
+        console.log('Voucher applied:', {
+          voucherId,
+          discountAmount,
+          originalAmount: subTotal,
+          finalAmount: subTotal - discountAmount,
+        });
+      }
+
+      const orderData = {
+        customerId,
+        totalAmount: subTotal - discountAmount,
+        orderStatus: intiialStatus,
+        address,
+        discountAmount,
+        voucherId,
+        paymentMethod,
+        orderDetails: [], // Chưa có chi tiết đơn hàng tại thời điểm này
+        note: note || '',
+      };
+
+      const order = (await this.orderRepository.createOrder(orderData)) as {
+        _id: string;
+        [key: string]: any;
+      };
+
+      const orderDetailsData = cartItem.map((item) => ({
+        laptopId: new Types.ObjectId(item._id),
+        quantity: item.quantity,
+        price: item.discountPrice,
+        subTotal: item.quantity * item.discountPrice,
       }));
 
-      notificationService
-        .createBulkNotifications(adminNotifications)
-        .catch((err) =>
-          console.error('Failed to send admin notifications:', err),
-        );
-    }
+      const createOrderDetails =
+        await this.orderRepository.createOrderDetail(orderDetailsData);
+      const orderDetailIds = createOrderDetails.map((item) => item._id);
 
-    // handle case paymentMethod
-
-    if (paymentMethod === PaymentMethod.CASH) {
-      return {
-        data: order,
-        message: 'Đơn hàng đã được tạo, chờ xác nhận',
-      };
-    } else if (paymentMethod === PaymentMethod.ZALOPAY) {
-      const paymentRes = await this.paymentService.processPayment(order, {
-        totalAmount: order.totalAmount,
-        paymentMethod,
-        customerId,
-        orderDetail: cartItem,
-      });
-
-      const orderRes = await this.orderRepository.findOrderById(
-        order._id as string,
+      await Order.findByIdAndUpdate(
+        order._id,
+        { $set: { orderDetails: orderDetailIds } },
+        { session },
       );
-      // return { data: order, payment: paymentRes, message: "vui long thanh toan" };
-      // console.log('orderRes', orderRes);
 
-      return {
-        data: orderRes,
-        payment: paymentRes,
-        message: 'vui long thanh toan',
-      };
+      // ✅ 3. Reserve stock (giảm stock ngay khi tạo order) - Atomic operation
+      for (const item of cartItem) {
+        const result = await Laptop.findOneAndUpdate(
+          {
+            _id: new Types.ObjectId(item._id),
+            stock: { $gte: item.quantity }, // Chỉ update nếu stock >= quantity
+          },
+          { $inc: { stock: -item.quantity } },
+          { new: true, session },
+        );
+
+        if (!result) {
+          throw new Error(
+            `Sản phẩm "${item._id}" không đủ hàng hoặc đã bị thay đổi`,
+          );
+        }
+      }
+
+      // ✅ 3.1. Tạo VoucherUsage record (nếu có voucher)
+      if (voucherId) {
+        await this.voucherService.createVoucherUsage(
+          voucherId,
+          customerId,
+          order._id,
+          discountAmount,
+          session,
+        );
+      }
+
+      // Commit transaction
+      await session.commitTransaction();
+
+      // ✅ Gửi notification sau khi commit thành công
+      // ✅ Gửi notification cho khách hàng
+      notificationService
+        .createNotification({
+          userId: customerId,
+          type: 'order',
+          title: '🎉 Đơn hàng đã được tạo!',
+          message: `Đơn hàng #${order._id} của bạn đã được tạo thành công với tổng giá trị ${(subTotal - discountAmount).toLocaleString('vi-VN')}đ`,
+          data: {
+            orderId: order._id,
+            totalAmount: subTotal - discountAmount,
+            orderStatus: intiialStatus,
+            paymentMethod,
+          },
+          link: `/orders/${order._id}`,
+        })
+        .catch((err) => console.error('Failed to send notification:', err));
+
+      // ✅ Gửi notification cho TẤT CẢ admin với TẤT CẢ đơn hàng (không có filter)
+      // Lưu ý: Tất cả đơn hàng đều được gửi notification, không phân biệt giá trị
+      const adminIds = await this.getAdminUserIds();
+      if (adminIds.length > 0) {
+        const totalAmount = subTotal - discountAmount;
+
+        // Tạo notifications cho tất cả admin
+        const adminNotifications = adminIds.map((adminId) => ({
+          userId: adminId,
+          type: 'order' as const,
+          title: '📦 Đơn hàng mới',
+          message: `Có đơn hàng mới #${order._id} với giá trị ${totalAmount.toLocaleString('vi-VN')}đ cần xử lý`,
+          data: {
+            orderId: order._id,
+            customerId,
+            totalAmount: totalAmount,
+            orderStatus: intiialStatus,
+            paymentMethod,
+            // Priority chỉ để frontend highlight, KHÔNG filter notifications
+            // Đơn > 20tr = high priority (highlight đỏ), còn lại = normal
+            priority: totalAmount > 20000000 ? 'high' : 'normal',
+          },
+          link: `/admin/orders/${order._id}`,
+        }));
+
+        console.log(
+          `📤 Gửi notification cho ${adminIds.length} admin về đơn hàng #${order._id} (${totalAmount.toLocaleString('vi-VN')}đ)`,
+        );
+
+        notificationService
+          .createBulkNotifications(adminNotifications)
+          .then(() => {
+            console.log(
+              `✅ Đã gửi notification thành công cho ${adminIds.length} admin`,
+            );
+          })
+          .catch((err) =>
+            console.error('❌ Failed to send admin notifications:', err),
+          );
+      } else {
+        console.warn(
+          '⚠️ Không có admin nào trong hệ thống để gửi notification',
+        );
+      }
+
+      // handle case paymentMethod
+      if (paymentMethod === PaymentMethod.CASH) {
+        return {
+          data: order,
+          message: 'Đơn hàng đã được tạo, chờ xác nhận',
+        };
+      } else if (paymentMethod === PaymentMethod.ZALOPAY) {
+        const paymentRes = await this.paymentService.processPayment(order, {
+          totalAmount: order.totalAmount,
+          paymentMethod,
+          customerId,
+          orderDetail: cartItem,
+        });
+
+        const orderRes = await this.orderRepository.findOrderById(
+          order._id as string,
+        );
+
+        return {
+          data: orderRes,
+          payment: paymentRes,
+          message: 'vui long thanh toan',
+        };
+      }
+    } catch (error) {
+      // Rollback transaction nếu có lỗi
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-    // return order
   }
 
   async findOrderById(orderId: string) {
@@ -192,13 +275,14 @@ export default class OrderService {
   async cancelingOrder(id: string) {
     const order = await this.orderRepository.cancelingOrder(id);
 
-    // ✅ Gửi notification khi đơn hàng bị hủy
+    // ✅ Gửi notification khi đơn hàng đang được hủy
     if (
       order &&
       typeof order === 'object' &&
       'customerId' in order &&
       order.customerId
     ) {
+      // Gửi notification cho customer
       notificationService
         .createNotification({
           userId: order.customerId.toString(),
@@ -209,6 +293,48 @@ export default class OrderService {
           link: `/orders/${id}`,
         })
         .catch((err) => console.error('Failed to send notification:', err));
+
+      // ✅ Thông báo cho admin khi customer yêu cầu hủy đơn
+      const adminIds = await this.getAdminUserIds();
+      if (adminIds.length > 0) {
+        // Lấy thông tin đơn hàng để hiển thị giá trị
+        const orderDetail = await this.orderRepository.findOrderById(id);
+        const totalAmount = orderDetail?.totalAmount || 0;
+
+        const adminNotifications = adminIds.map((adminId) => ({
+          userId: adminId,
+          type: 'order' as const,
+          title: '⚠️ Yêu cầu hủy đơn hàng',
+          message: `Khách hàng yêu cầu hủy đơn hàng #${id} với giá trị ${totalAmount.toLocaleString('vi-VN')}đ`,
+          data: {
+            orderId: id,
+            customerId: order.customerId.toString(),
+            totalAmount: totalAmount,
+            status: 'canceling',
+            action: 'customer_request_cancel',
+          },
+          link: `/admin/orders/${id}`,
+        }));
+
+        console.log(
+          `📤 Gửi notification cho ${adminIds.length} admin về yêu cầu hủy đơn #${id}`,
+        );
+
+        notificationService
+          .createBulkNotifications(adminNotifications)
+          .then(() => {
+            console.log(
+              `✅ Đã gửi notification thành công cho ${adminIds.length} admin`,
+            );
+          })
+          .catch((err) =>
+            console.error('❌ Failed to send admin notifications:', err),
+          );
+      } else {
+        console.warn(
+          '⚠️ Không có admin nào trong hệ thống để gửi notification',
+        );
+      }
     }
 
     return order;
@@ -216,6 +342,11 @@ export default class OrderService {
 
   async canceledOrder(id: string) {
     const order = await this.orderRepository.canceledOrder(id);
+
+    // ✅ Refund voucher khi order bị cancelled
+    if (order && order.voucherId) {
+      await this.voucherService.refundVoucher(id);
+    }
 
     // ✅ Gửi notification khi đơn hàng đã hủy
     if (order && order.customerId) {
@@ -230,23 +361,46 @@ export default class OrderService {
         })
         .catch((err) => console.error('Failed to send notification:', err));
 
-      // ✅ Thông báo cho admin
+      // ✅ Thông báo cho admin khi đơn hàng đã bị hủy
       const adminIds = await this.getAdminUserIds();
       if (adminIds.length > 0) {
+        // Lấy thông tin đơn hàng để hiển thị giá trị
+        const orderDetail = await this.orderRepository.findOrderById(id);
+        const totalAmount = orderDetail?.totalAmount || 0;
+
         const adminNotifications = adminIds.map((adminId) => ({
           userId: adminId,
           type: 'order' as const,
           title: '🔔 Đơn hàng đã bị hủy',
-          message: `Đơn hàng #${id} đã bị hủy bởi khách hàng`,
-          data: { orderId: id, status: 'cancelled' },
+          message: `Đơn hàng #${id} với giá trị ${totalAmount.toLocaleString('vi-VN')}đ đã bị hủy bởi khách hàng`,
+          data: {
+            orderId: id,
+            customerId: order.customerId.toString(),
+            totalAmount: totalAmount,
+            status: 'cancelled',
+            action: 'order_cancelled',
+          },
           link: `/admin/orders/${id}`,
         }));
 
+        console.log(
+          `📤 Gửi notification cho ${adminIds.length} admin về đơn hàng đã hủy #${id}`,
+        );
+
         notificationService
           .createBulkNotifications(adminNotifications)
+          .then(() => {
+            console.log(
+              `✅ Đã gửi notification thành công cho ${adminIds.length} admin`,
+            );
+          })
           .catch((err) =>
-            console.error('Failed to send admin notifications:', err),
+            console.error('❌ Failed to send admin notifications:', err),
           );
+      } else {
+        console.warn(
+          '⚠️ Không có admin nào trong hệ thống để gửi notification',
+        );
       }
     }
 
@@ -283,21 +437,33 @@ export default class OrderService {
     const oldOrder = await Order.findById(id).populate('orderDetails');
     const order = await this.orderRepository.changeOrderStatus(status, id);
 
-    // Nếu chuyển sang completed và trước đó chưa phải completed thì cập nhật stock
+    // ✅ Restore stock nếu order bị cancelled (vì đã reserve stock khi tạo order)
     if (
       order &&
-      status === 'completed' &&
-      oldOrder?.orderStatus !== 'completed'
+      status === 'cancelled' &&
+      oldOrder?.orderStatus !== 'cancelled'
     ) {
       if (oldOrder && oldOrder.orderDetails) {
         for (const detail of oldOrder.orderDetails as any[]) {
-          await Laptop.updateOne(
-            { _id: detail.laptopId },
-            { $inc: { stock: -detail.quantity } },
-          );
+          const laptopId =
+            (detail.laptopId as any)?._id?.toString() ||
+            detail.laptopId?.toString();
+          if (laptopId) {
+            await Laptop.findByIdAndUpdate(
+              laptopId,
+              { $inc: { stock: detail.quantity } }, // Restore stock
+            );
+          }
         }
       }
+
+      // ✅ Refund voucher khi order bị cancelled by admin
+      if (oldOrder && oldOrder.voucherId) {
+        await this.voucherService.refundVoucher(id);
+      }
     }
+
+    // ✅ Note: Stock đã được giảm khi tạo order (reserve), không cần giảm lại khi completed
 
     // ✅ Gửi notification khi trạng thái đơn hàng thay đổi
     if (order && order.customerId) {

@@ -175,4 +175,78 @@ export const ProductVariantController = {
       res.status(500).json({ message: 'Loi khong sac dinh', error });
     }
   },
+
+  // Search products with full-text search
+  async searchProducts(req: Request, res: Response) {
+    try {
+      const keyword = req.query.q as string;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      // Parse filters from query params
+      const filters: any = {};
+      if (req.query.minPrice) {
+        filters.minPrice = parseFloat(req.query.minPrice as string);
+      }
+      if (req.query.maxPrice) {
+        filters.maxPrice = parseFloat(req.query.maxPrice as string);
+      }
+      if (req.query.categories) {
+        filters.categories = Array.isArray(req.query.categories)
+          ? req.query.categories
+          : [req.query.categories];
+      }
+      if (req.query.status) {
+        filters.status = req.query.status as string;
+      }
+
+      const result = await ProductVariantsService.searchProducts(
+        keyword,
+        page,
+        limit,
+        Object.keys(filters).length > 0 ? filters : undefined,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Tìm kiếm sản phẩm thành công',
+        ...result,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ success: false, message: error.message });
+      } else {
+        res
+          .status(500)
+          .json({ success: false, message: 'Lỗi không xác định', error });
+      }
+    }
+  },
+
+  // Autocomplete for search suggestions
+  async autocompleteProducts(req: Request, res: Response) {
+    try {
+      const keyword = req.query.q as string;
+      const limit = parseInt(req.query.limit as string) || 5;
+
+      const result = await ProductVariantsService.autocompleteProducts(
+        keyword,
+        limit,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Lấy gợi ý tìm kiếm thành công',
+        ...result,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ success: false, message: error.message });
+      } else {
+        res
+          .status(500)
+          .json({ success: false, message: 'Lỗi không xác định', error });
+      }
+    }
+  },
 };

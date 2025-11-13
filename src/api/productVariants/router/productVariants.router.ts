@@ -14,6 +14,15 @@ productVariantsRouter.get('/filter', (req, res) => {
   ProductVariantController.findProductVariantsByFilter(req, res);
 });
 
+// Search endpoints - must be before /:id to avoid route conflicts
+productVariantsRouter.get('/search', (req, res) => {
+  ProductVariantController.searchProducts(req, res);
+});
+
+productVariantsRouter.get('/autocomplete', (req, res) => {
+  ProductVariantController.autocompleteProducts(req, res);
+});
+
 productVariantsRouter.get('/:id', (req, res) => {
   ProductVariantController.findProductVariantById(req, res);
 });

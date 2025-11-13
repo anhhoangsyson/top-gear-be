@@ -55,4 +55,7 @@ const productVariantsSchema = new Schema(
   },
 );
 
+// Create text index for search functionality
+productVariantsSchema.index({ variantName: 'text' });
+
 export const ProductVariants = model('ProductVariant', productVariantsSchema);
