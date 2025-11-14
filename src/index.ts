@@ -42,20 +42,18 @@ const server = http.createServer(app);
 app.use(
   cors({
     credentials: true,
-    origin: ['http://localhost:3001'],
+    origin: [process.env.CORS_ORIGIN || 'http://localhost:3001'],
     allowedHeaders: 'Content-Type,Authorization',
   }),
 );
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 setupSwagger(app);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, './views'));
 app.use(passport.initialize());
-connectDatabase();
-connectRedis();
 
 // Initialize Socket.io
 socketService.initialize(server);
@@ -89,7 +87,20 @@ app.use('/api/v1/ratings', ratingRouter);
 app.use('/api/v1/wishlist', wishlistRouter);
 app.use(errorHandler);
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại port ${PORT}`);
-  console.log(`📡 Socket.IO ready for realtime notifications`);
-});
+const start = async () => {
+  try {
+    await connectDatabase();
+    connectRedis();
+    server.listen(PORT, () => {
+      console.log(`🚀 Server đang chạy tại port ${PORT}`);
+      console.log(`📡 Socket.IO ready for realtime notifications`);
+    });
+  } catch (err) {
+    console.error('Failed to start server', err);
+    process.exit(1);
+  }
+};
+
+start();
+
+export default app;
