@@ -1,11 +1,11 @@
 import { IMenu, createMenu } from '../dto/menus.dto';
 import { Menus } from '../schema/menu.schema';
 
-export class MenusRpository {
+export class MenusRepository {
   async getAllMenus(): Promise<IMenu[]> {
     return await Menus.find().populate('categories_id');
   }
-  async createMenu(menuData: Partial<createMenu>): Promise<createMenu> {
+  async createMenu(menuData: Partial<createMenu>): Promise<IMenu> {
     const Menu = new Menus(menuData);
     return await Menu.save();
   }
@@ -13,9 +13,12 @@ export class MenusRpository {
     return await Menus.findById(id);
   }
   async deleteMenusById(id: string): Promise<IMenu | null> {
-    return await Menus.findById(id);
+    return await Menus.findByIdAndDelete(id);
   }
-  async updataMenusById(id: string, dataMenus: IMenu): Promise<IMenu | null> {
-    return await Menus.findById(id, dataMenus, { new: true });
+  async updateMenuById(
+    id: string,
+    dataMenus: Partial<IMenu>,
+  ): Promise<IMenu | null> {
+    return await Menus.findByIdAndUpdate(id, dataMenus, { new: true });
   }
 }

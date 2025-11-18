@@ -3,6 +3,7 @@ import { LaptopController } from '../controller/laptop.controller';
 import { LaptopService } from '../service/laptop.service';
 import { LaptopRepository } from '../repository/laptop.repository';
 import upload, { uploadMultiple } from '../../../middlewares/upload/upload';
+import authenticateJWT from '../../../middlewares/authenticate/authenticateJWT';
 
 const laptopRouter = Router();
 

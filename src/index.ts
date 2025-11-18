@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import http from 'http';
 import connectDatabase from './config/database/database.config';
 import usersRouter from './api/users/router/users.router';
-import menusRouter from './api/menus/router/menus.router';
 import connectRedis from './config/redis/redis.config';
 import setupSwagger from './config/swagger/swagger.config';
 import path = require('path');
@@ -63,7 +62,6 @@ app.get('/', (req: Request, res: Response) => {
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', usersRouter);
-app.use('/api/v1/menus', menusRouter);
 app.use('/api/v1/blog', blogsRouter);
 app.use('/api/v1/comments', commentsRouter);
 app.use('/api/v1/likes', likesRouter);

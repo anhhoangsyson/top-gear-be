@@ -28,13 +28,13 @@ const usersSchema = new Schema<IUser>(
     fullname: { type: String, required: true },
     usersname: {
       type: String,
-      required: function () {
+      required: function (this: any): boolean {
         return this.authType === 'local';
       },
     },
     password: {
       type: String,
-      required: function () {
+      required: function (this: any): boolean {
         return this.authType === 'local';
       },
     },
