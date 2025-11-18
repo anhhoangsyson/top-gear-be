@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
-import http from 'http';
+import http, { METHODS } from 'http';
 import connectDatabase from './config/database/database.config';
 import usersRouter from './api/users/router/users.router';
 import connectRedis from './config/redis/redis.config';
@@ -41,7 +41,11 @@ const server = http.createServer(app);
 app.use(
   cors({
     credentials: true,
-    origin: [process.env.CORS_ORIGIN || 'http://localhost:3001'],
+    origin: [
+      process.env.CORS_ORIGIN || 'http://localhost:3001',
+      'https://e-com-two-psi.vercel.app',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: 'Content-Type,Authorization',
   }),
 );
