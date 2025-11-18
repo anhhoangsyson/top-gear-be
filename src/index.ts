@@ -45,7 +45,7 @@ app.use(
       process.env.CORS_ORIGIN || 'http://localhost:3001',
       'https://e-com-two-psi.vercel.app',
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: 'Content-Type,Authorization',
   }),
 );
