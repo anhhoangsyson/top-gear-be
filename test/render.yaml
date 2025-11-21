@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: e-com-api
+    env: docker           # "docker" để dùng Dockerfile; hoặc "node" cho native
+    region: singapore     # chọn region phù hợp
+    plan: starter
+    repo: https://github.com/your-org/your-repo
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      # Others left empty to configure in UI

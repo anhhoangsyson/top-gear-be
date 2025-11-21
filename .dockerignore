@@ -1,0 +1,8 @@
+# filepath: d:\xbox\DATN\top-gear-be\.dockerignore
+node_modules
+dist
+npm-debug.log
+.env
+.vscode
+.git
+Dockerfile*

@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
+// File này chịu trách nhiệm kết nối tới MongoDB bằng Mongoose.
+// Nó cố gắng sử dụng `MONGO_URI` nếu có credentials, nếu không sẽ build URI từ
+// `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_NAME`.
+// Việc mask URI khi log giúp tránh lộ thông tin nhạy cảm trong logs.
 dotenv.config();
 
 const buildUri = () => {
@@ -52,12 +56,14 @@ const connectDatabase = async () => {
 
   const connectWithRetry = async () => {
     try {
+      // Các option dưới giúp timeout sớm khi host unreachable và cho phép retry logic
       await mongoose.connect(uri, {
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 4500,
       } as mongoose.ConnectOptions);
       console.log('Connected mongodb thành công');
     } catch (error) {
+      // Nếu kết nối thất bại, in error và thử lại sau 5s (useful cho deploy khi DB chưa sẵn sàng)
       console.log('Không thể kết nối với mongodb. Lỗi: ', error);
       setTimeout(connectWithRetry, 5000);
     }

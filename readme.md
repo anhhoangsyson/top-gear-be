@@ -1,3 +1,193 @@
+# Top Gear — Backend (API)
+
+A friendly, plain-language guide to this project and how to run, test and deploy it.
+
+This repository contains the backend API for an e-commerce application called "Top Gear". It provides endpoints for users, authentication, products, carts, orders, notifications and more. The API is written in TypeScript and uses Node.js, Express and MongoDB.
+
+---
+
+## Quick TL;DR (for non-technical readers)
+
+- This code is the server that powers an online shop. The server stores products, user accounts, shopping carts, orders and sends notifications.
+- Developers run the server locally (on their computer) to test features. In production the same server runs on a hosting service (e.g. Render).
+- We use Docker to package the server so it runs the same way on any machine.
+
+---
+
+## Features (what this API provides)
+
+- User management: sign up, sign in, user profile, avatars.
+- Authentication: local login and social login support (Google/Facebook), password handling.
+- Products & Variants: products, product variants, images, categories.
+- Search: full-text search and autocomplete for products.
+- Carts & Cart Details: store items users want to buy, update and remove items.
+- Orders & Order Details: checkout process, order storage and management.
+- Vouchers: apply discounts or voucher codes.
+- Ratings & Comments: product reviews, comments and ratings.
+- Notifications: system can store and deliver notifications (e.g. unread counts).
+- Wishlist: users can save products for later.
+- Admin / Dashboard endpoints for management views.
+- Swagger API docs are included for developers (see `docs/` and the running server's swagger UI).
+
+---
+
+## High-level workflows (explained simply)
+
+These explain how features behave from a user's perspective.
+
+- Sign up / Login
+  - A user provides an email/username and password (or uses social login). The server creates a user account and stores encrypted credentials.
+  - On successful login the server returns a token (used by the frontend to prove who the user is on subsequent requests).
+
+- Browsing & Search
+  - Users search the store by typing keywords (e.g. "laptop"). The server uses a search index to find matching product names and returns results.
+  - If product variant names are empty, the system can also fallback to searching the main product records and return matching variants.
+
+- Cart & Checkout
+  - Users add product variants to their cart. The server stores the cart items linked to the user.
+  - At checkout the frontend sends the cart contents and payment information to the server, the server creates an order and returns confirmation.
+
+- Orders & Notifications
+  - Orders are stored with status (pending, paid, shipped, etc.). Notifications are created for events like new orders or status changes.
+  - Users can read notifications and the server tracks unread counts.
+
+- Wishlist & Ratings
+  - Wishlist stores items user saved. Ratings and comments let users review products.
+
+NOTE: These workflows are simplified — the real app includes error handling, validation, and various edge cases.
+
+---
+
+## Developer Setup (quick start)
+
+We provide a Docker setup so you can run the full stack (API + MongoDB + Redis) locally. Using Docker ensures everyone runs the same environment.
+
+Prerequisites
+- Docker Desktop (running with WSL2 on Windows is recommended)
+- Git
+
+Steps (WSL recommended on Windows):
+
+1. Open a terminal and go to the project root:
+
+```bash
+cd /mnt/d/xbox/DATN/top-gear-be
+```
+
+2. Copy the example environment file to `.env` and fill required values (do not commit your real secrets):
+
+```bash
+cp .env.example .env
+# Edit .env with real credentials or for local dev use the compose DB
+```
+
+3. Run the full stack with Docker Compose (builds the backend and starts Mongo/Redis):
+
+```bash
+docker compose up --build
+```
+
+4. Open the API in your browser or use curl/Postman:
+
+```bash
+# Health endpoint
+curl http://localhost:3000/api/v1/health
+
+# Search example
+curl "http://localhost:3000/api/v1/pvariants/search?q=laptop"
+```
+
+5. View logs:
+
+```bash
+docker compose logs -f backend
+```
+
+6. Stop the stack:
+
+```bash
+docker compose down
+```
+
+If you prefer to run without Docker you can install Node 18 (LTS), run `npm ci`, then `npm run build` and `npm run start` (the repo contains scripts). We recommend Docker for consistent results.
+
+---
+
+## Environment variables (.env)
+
+Create a `.env` file (never commit it). Use `.env.example` as the template. Important keys:
+
+- `MONGO_URI` — MongoDB connection string (use local docker host `mongodb://mongo:27017/topgeardb` when using docker-compose)
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` — Redis connection
+- `JWT_SECRET` — secret for signing tokens
+- `CORS_ORIGINS` — comma-separated list of allowed origins (frontend domains)
+
+There is a committed `.env.example` file in the repository showing the required keys.
+
+---
+
+## API documentation
+
+The project includes Swagger-compatible API docs in `docs/`. When the server is running locally, the built-in Swagger UI (configured in the app) lets developers explore endpoints and request/response formats.
+
+---
+
+## Deployment (Render)
+
+This project supports deployment to Render (Docker). Suggested flow:
+
+1. Connect your GitHub repo in the Render dashboard.
+2. Create a new Web Service and choose **Docker** as the environment so Render uses the `Dockerfile` in the repo.
+3. Add environment variables in the Render UI (MONGO_URI, REDIS_*, JWT_SECRET, CORS_ORIGINS, etc.).
+4. Set Health Check Path to `/api/v1/health`.
+5. Enable Auto Deploy (Render will build the Docker image on push to the selected branch).
+
+Notes:
+- Do not commit `.env` to your repository. Use Render's Environment Variables to store secrets.
+- You can test builds locally using `docker compose build` before pushing.
+
+---
+
+## CI / CD recommendations (simple)
+
+- Run automated tests and build in CI (e.g., GitHub Actions) on pull requests so broken code is not merged.
+- Keep Render's auto-deploy enabled for the `main` branch, but protect `main` with branch protections that require CI to pass.
+
+If you want a deploy pipeline that triggers only after CI passes, use a small GitHub Action that calls the Render deploy API (or pushes an image to GHCR then triggers a Render/host pull).
+
+---
+
+## Troubleshooting (common issues)
+
+- `MODULE_NOT_FOUND` when starting in Docker: if a module is missing after building the container, check that `dependencies` in `package.json` include the package (not only `devDependencies`) and that `node_modules` from the build are preserved (use the named `node_modules` volume or do not mount host `node_modules`).
+- `auth required` connecting to Mongo: verify `MONGO_URI` includes credentials or set `DB_USER`/`DB_PASSWORD` and ensure the build uses the correct value.
+- CORS blocked in browser: check `CORS_ORIGINS` env and ensure the origin the browser sends (exact scheme+host+port) is included.
+
+---
+
+## For non-technical stakeholders — how the app works (very simply)
+
+- The backend is a service that stores data (products, users, orders) and gives that data to the frontend when asked. It also accepts instructions (like "add this item to my cart"), stores them, and notifies users when something important happens.
+- Developers update code in the Git repository. When code is pushed to the main branch and passes automated checks, the updated service is built and deployed to the cloud so users can use the new features.
+
+---
+
+## Where to look next (developer pointers)
+
+- `src/api/*` — the API modules grouped by feature (users, products, carts, orders, notifications, etc.).
+- `src/config` — configuration for database, Redis, Cloudinary, passport and other services.
+- `src/middlewares` — error handling and auth middlewares.
+- `docs/` — Swagger docs for the API definitions.
+
+---
+
+If you'd like, I can also generate:
+
+- A smaller `README_FOR_NON_IT.md` that explains user workflows in even simpler terms.
+- A `DEPLOY_RENDER.md` with step‑by‑step screenshots for setting environment variables in Render.
+- A GitHub Actions CI workflow to run tests and optionally trigger Render deploy.
+
+Tell me which of the above you'd like next and I'll add the file(s).
 # 🚀 Top Gear - E-Commerce Backend API
 
 > Backend API cho hệ thống bán laptop Top Gear, xây dựng với Node.js, Express, TypeScript và MongoDB.

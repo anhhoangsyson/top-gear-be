@@ -1,0 +1,26 @@
+version: "3.8"
+services:
+  mongo:
+    image: mongo:6.0
+    ports: ["27017:27017"]
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  backend:
+    build: .
+    env_file: .env
+    ports: ["3000:3000"]
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./:/src:cached
+      - node_modules:/src/node_modules
+
+volumes:
+  mongo_data:
+  node_modules:

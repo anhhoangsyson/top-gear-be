@@ -56,6 +56,19 @@ laptopRouter.get('/filter', (req, res, next) => {
   laptopController.filterLaptops(req, res, next);
 });
 
+// Search endpoints - đặt trước các route động như /:id
+laptopRouter.get('/search/suggestions', (req, res, next) => {
+  laptopController.searchSuggestions(req, res, next);
+});
+
+laptopRouter.get('/search/autocomplete', (req, res, next) => {
+  laptopController.autocomplete(req, res, next);
+});
+
+laptopRouter.get('/search', (req, res, next) => {
+  laptopController.realtimeSearch(req, res, next);
+});
+
 laptopRouter.get('/related', (req, res, next) => {
   laptopController.getLaptopRelated(req, res, next);
 });

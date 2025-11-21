@@ -279,4 +279,92 @@ export class LaptopController {
       next(error);
     }
   }
+
+  // Search suggestions - gợi ý sản phẩm khi user đang gõ
+  async searchSuggestions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { q, limit } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({
+          message: 'Query parameter "q" is required',
+        });
+      }
+
+      const suggestions = await this.laptopService.searchSuggestions(
+        q,
+        limit ? parseInt(limit as string) : undefined,
+      );
+
+      res.status(200).json({
+        data: suggestions,
+        query: q,
+        count: suggestions.length,
+        message: 'Search suggestions retrieved successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Autocomplete - gợi ý từ khóa để hoàn thành câu tìm kiếm
+  async autocomplete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { q, limit } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({
+          message: 'Query parameter "q" is required',
+        });
+      }
+
+      const suggestions = await this.laptopService.autocomplete(
+        q,
+        limit ? parseInt(limit as string) : undefined,
+      );
+
+      res.status(200).json({
+        data: suggestions,
+        query: q,
+        count: suggestions.length,
+        message: 'Autocomplete suggestions retrieved successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Realtime search - tìm kiếm realtime với phân trang và sắp xếp
+  async realtimeSearch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { q, page, limit, sortBy } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({
+          message: 'Query parameter "q" is required',
+        });
+      }
+
+      const result = await this.laptopService.realtimeSearch(
+        q,
+        page ? parseInt(page as string) : undefined,
+        limit ? parseInt(limit as string) : undefined,
+        sortBy as string,
+      );
+
+      res.status(200).json({
+        data: result.laptops,
+        query: q,
+        pagination: {
+          page: result.page,
+          limit: limit ? parseInt(limit as string) : 20,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
+        message: 'Search results retrieved successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -128,4 +128,31 @@ export class LaptopService {
   async setActiveStatus(id: string, isActive: boolean) {
     return await this.laptopRepository.updateLaptop(id, { isActive });
   }
+
+  async searchSuggestions(query: string, limit?: number): Promise<any[]> {
+    return await this.laptopRepository.searchSuggestions(query, limit);
+  }
+
+  async autocomplete(query: string, limit?: number): Promise<string[]> {
+    return await this.laptopRepository.autocomplete(query, limit);
+  }
+
+  async realtimeSearch(
+    query: string,
+    page?: number,
+    limit?: number,
+    sortBy?: string,
+  ): Promise<{
+    laptops: ILaptop[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    return await this.laptopRepository.realtimeSearch(
+      query,
+      page,
+      limit,
+      sortBy,
+    );
+  }
 }
