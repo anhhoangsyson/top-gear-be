@@ -29,8 +29,8 @@ export default class OrderController {
       });
     } catch (error) {
       res.status(500).json({
-        message: 'Internal server error',
-        error: (error as Error)?.message,
+        message: (error as Error)?.message,
+        error: (error as Error)?.name || 'Internal server error',
       });
     }
   }
