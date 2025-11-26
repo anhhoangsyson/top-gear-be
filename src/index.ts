@@ -92,7 +92,7 @@ app.use('/api/v1/laptop', laptopRouter);
 app.use('/api/v1/laptop-group', laptopGroupRouter);
 app.use('/api/v1/admin/dashboard', dashboardRouter);
 app.use('/api/v1/notifications', notificationRouter);
-app.use('/api/v1/ratings', ratingRouter);
+app.use('/api/v1/rating', ratingRouter);
 app.use('/api/v1/wishlist', wishlistRouter);
 // Error handler: middleware cuối cùng để bắt và format lỗi trả client
 app.use(errorHandler);

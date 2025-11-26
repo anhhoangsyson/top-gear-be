@@ -7,8 +7,6 @@ import OrderDetail, {
   IOrderDetail,
   IOrderDetailResponse,
 } from '../../orderDetail/schema/orderDetail.schema';
-import { Users } from '../../users/schema/user.schema';
-import { IUser } from '../../users/dto/users.dto';
 import mongoose, { PipelineStage } from 'mongoose';
 
 export class OrderRepository {
@@ -52,6 +50,7 @@ export class OrderRepository {
           from: 'laptops',
           localField: 'orderDetails.laptopId',
           foreignField: '_id',
+
           as: 'laptopDetails',
         },
       },
@@ -394,6 +393,44 @@ export class OrderRepository {
                 quantity: '$$detail.quantity',
                 price: '$$detail.price',
                 subTotal: '$$detail.subTotal',
+                name: {
+                  $let: {
+                    vars: {
+                      laptop: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$laptopDetails',
+                              as: 'l',
+                              cond: { $eq: ['$$l._id', '$$detail.laptopId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: '$$laptop.name',
+                  },
+                },
+                slug: {
+                  $let: {
+                    vars: {
+                      laptop: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$laptopDetails',
+                              as: 'l',
+                              cond: { $eq: ['$$l._id', '$$detail.laptopId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: '$$laptop.slug',
+                  },
+                },
                 images: {
                   $let: {
                     vars: {

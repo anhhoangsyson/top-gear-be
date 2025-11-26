@@ -233,6 +233,7 @@ export class RatingService {
       userId?: string;
       laptopId?: string;
       rating?: number;
+      status?: string;
       search?: string;
     },
     page: number = 1,
@@ -260,6 +261,111 @@ export class RatingService {
     }
 
     return deleted;
+  }
+
+  // Admin Reply Methods
+  async addAdminReply(
+    ratingId: string,
+    adminId: string,
+    content: string,
+  ): Promise<IRating> {
+    const rating = await this.ratingRepository.findRatingById(ratingId);
+    if (!rating) {
+      throw new Error('Đánh giá không tồn tại');
+    }
+
+    const updatedRating = await this.ratingRepository.addAdminReply(
+      ratingId,
+      adminId,
+      content,
+    );
+
+    if (!updatedRating) {
+      throw new Error('Không thể thêm reply');
+    }
+
+    // Send notification to user
+    try {
+      const user = await Users.findById(rating.userId);
+      if (user) {
+        await notificationService.createNotification({
+          userId: user._id.toString(),
+          type: 'rating',
+          title: '💬 Admin đã trả lời đánh giá của bạn',
+          message: `Admin đã trả lời đánh giá của bạn`,
+          data: {
+            ratingId: ratingId,
+            replyContent: content.substring(0, 100),
+          },
+          link: `/account/ratings/${ratingId}`,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send reply notification:', error);
+    }
+
+    return updatedRating;
+  }
+
+  async updateAdminReply(ratingId: string, content: string): Promise<IRating> {
+    const rating = await this.ratingRepository.findRatingById(ratingId);
+    if (!rating) {
+      throw new Error('Đánh giá không tồn tại');
+    }
+
+    if (!rating.adminReply) {
+      throw new Error('Rating này chưa có reply');
+    }
+
+    const updatedRating = await this.ratingRepository.updateAdminReply(
+      ratingId,
+      content,
+    );
+
+    if (!updatedRating) {
+      throw new Error('Không thể cập nhật reply');
+    }
+
+    return updatedRating;
+  }
+
+  async deleteAdminReply(ratingId: string): Promise<IRating> {
+    const rating = await this.ratingRepository.findRatingById(ratingId);
+    if (!rating) {
+      throw new Error('Đánh giá không tồn tại');
+    }
+
+    if (!rating.adminReply) {
+      throw new Error('Rating này chưa có reply');
+    }
+
+    const updatedRating =
+      await this.ratingRepository.deleteAdminReply(ratingId);
+
+    if (!updatedRating) {
+      throw new Error('Không thể xóa reply');
+    }
+
+    return updatedRating;
+  }
+
+  // Status Management
+  async updateRatingStatus(ratingId: string, status: string): Promise<IRating> {
+    const rating = await this.ratingRepository.findRatingById(ratingId);
+    if (!rating) {
+      throw new Error('Đánh giá không tồn tại');
+    }
+
+    const updatedRating = await this.ratingRepository.updateRatingStatus(
+      ratingId,
+      status,
+    );
+
+    if (!updatedRating) {
+      throw new Error('Không thể cập nhật trạng thái');
+    }
+
+    return updatedRating;
   }
 }
 

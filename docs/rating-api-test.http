@@ -1,0 +1,208 @@
+### Rating Reply & Status Management - API Tests
+### Sử dụng với REST Client extension trong VSCode
+
+@baseUrl = http://localhost:3000/api/v1
+@adminToken = YOUR_ADMIN_JWT_TOKEN
+@ratingId = RATING_ID_TO_TEST
+
+### ========================================
+### 1. Admin Reply to Rating
+### ========================================
+POST {{baseUrl}}/rating/admin/{{ratingId}}/reply
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": "Cảm ơn bạn đã đánh giá! Chúng tôi rất vui khi bạn hài lòng với sản phẩm. 🎉"
+}
+
+### ========================================
+### 2. Update Admin Reply
+### ========================================
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/reply
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": "Cảm ơn bạn đã đánh giá! Chúng tôi đã cập nhật nội dung trả lời."
+}
+
+### ========================================
+### 3. Delete Admin Reply
+### ========================================
+DELETE {{baseUrl}}/rating/admin/{{ratingId}}/reply
+Authorization: Bearer {{adminToken}}
+
+### ========================================
+### 4. Update Rating Status to Hidden
+### ========================================
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "hidden"
+}
+
+### ========================================
+### 5. Update Rating Status to Visible
+### ========================================
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "visible"
+}
+
+### ========================================
+### 6. Get All Ratings (Admin) - Filter by status
+### ========================================
+
+# Get all visible ratings
+GET {{baseUrl}}/rating/admin/all?status=visible&page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+###
+# Get all hidden ratings
+GET {{baseUrl}}/rating/admin/all?status=hidden&page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+###
+# Get all ratings (no filter)
+GET {{baseUrl}}/rating/admin/all?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+### ========================================
+### 7. Get Ratings by Laptop (Public - only visible)
+### ========================================
+@laptopId = LAPTOP_ID_TO_TEST
+
+GET {{baseUrl}}/rating/laptop/{{laptopId}}?page=1&limit=10
+
+### ========================================
+### 8. Get Rating by ID
+### ========================================
+GET {{baseUrl}}/rating/{{ratingId}}
+
+### ========================================
+### Error Cases Testing
+### ========================================
+
+### Invalid status value
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "invalid_status"
+}
+
+###
+### Empty reply content
+POST {{baseUrl}}/rating/admin/{{ratingId}}/reply
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": ""
+}
+
+###
+### Reply content too long (>2000 chars)
+POST {{baseUrl}}/rating/admin/{{ratingId}}/reply
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. [... repeat to exceed 2000 chars ...]"
+}
+
+###
+### Delete reply when no reply exists
+DELETE {{baseUrl}}/rating/admin/nonexistent-rating-id/reply
+Authorization: Bearer {{adminToken}}
+
+###
+### Update rating status without admin token (should fail)
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/status
+Content-Type: application/json
+
+{
+  "status": "hidden"
+}
+
+### ========================================
+### Complete Workflow Test
+### ========================================
+
+### Step 1: Get all pending ratings
+GET {{baseUrl}}/rating/admin/all?status=visible&page=1
+Authorization: Bearer {{adminToken}}
+
+###
+### Step 2: Reply to a rating
+POST {{baseUrl}}/rating/admin/RATING_ID_FROM_STEP1/reply
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "content": "Cảm ơn bạn đã đánh giá sản phẩm của chúng tôi!"
+}
+
+###
+### Step 3: Check if reply was added
+GET {{baseUrl}}/rating/RATING_ID_FROM_STEP1
+Authorization: Bearer {{adminToken}}
+
+###
+### Step 4: If inappropriate, hide the rating
+PATCH {{baseUrl}}/rating/admin/RATING_ID_FROM_STEP1/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "hidden"
+}
+
+###
+### Step 5: Verify rating is hidden from public endpoint
+GET {{baseUrl}}/rating/laptop/LAPTOP_ID?page=1
+# Rating should not appear in results
+
+###
+### Step 6: Admin can still see hidden rating
+GET {{baseUrl}}/rating/admin/all?status=hidden
+Authorization: Bearer {{adminToken}}
+# Rating should appear in results
+
+### ========================================
+### Stress Testing
+### ========================================
+
+### Multiple rapid status updates
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "hidden"
+}
+
+###
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "visible"
+}
+
+###
+PATCH {{baseUrl}}/rating/admin/{{ratingId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "hidden"
+}

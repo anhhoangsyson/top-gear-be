@@ -39,6 +39,7 @@ export const queryRatingSchema = z.object({
   orderId: z.string().optional(),
   laptopId: z.string().optional(),
   userId: z.string().optional(),
+  status: z.enum(['visible', 'hidden']).optional(),
   page: z
     .string()
     .optional()
@@ -50,3 +51,22 @@ export const queryRatingSchema = z.object({
 });
 
 export type QueryRatingDto = z.infer<typeof queryRatingSchema>;
+
+// Admin Reply DTO
+export const adminReplySchema = z.object({
+  content: z
+    .string()
+    .min(1, { message: 'Nội dung reply không được để trống' })
+    .max(2000, { message: 'Nội dung reply không được vượt quá 2000 ký tự' }),
+});
+
+export type AdminReplyDto = z.infer<typeof adminReplySchema>;
+
+// Update Status DTO (Admin only)
+export const updateStatusSchema = z.object({
+  status: z.enum(['visible', 'hidden'], {
+    errorMap: () => ({ message: 'Status phải là visible hoặc hidden' }),
+  }),
+});
+
+export type UpdateStatusDto = z.infer<typeof updateStatusSchema>;

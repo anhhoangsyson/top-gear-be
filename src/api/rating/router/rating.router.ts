@@ -79,4 +79,38 @@ router.delete(
   ratingController.deleteRatingByAdmin.bind(ratingController),
 );
 
+// ========== ADMIN REPLY ROUTES ==========
+// Add admin reply to rating
+router.post(
+  '/admin/:id/reply',
+  authenticateJWT,
+  checkAdmin,
+  ratingController.addAdminReply.bind(ratingController),
+);
+
+// Update admin reply
+router.patch(
+  '/admin/:id/reply',
+  authenticateJWT,
+  checkAdmin,
+  ratingController.updateAdminReply.bind(ratingController),
+);
+
+// Delete admin reply
+router.delete(
+  '/admin/:id/reply',
+  authenticateJWT,
+  checkAdmin,
+  ratingController.deleteAdminReply.bind(ratingController),
+);
+
+// ========== STATUS MANAGEMENT ROUTES ==========
+// Update rating status (visible/hidden)
+router.patch(
+  '/admin/:id/status',
+  authenticateJWT,
+  checkAdmin,
+  ratingController.updateRatingStatus.bind(ratingController),
+);
+
 export default router;

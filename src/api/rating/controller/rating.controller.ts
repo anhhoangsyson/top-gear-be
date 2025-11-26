@@ -4,6 +4,8 @@ import {
   createRatingSchema,
   updateRatingSchema,
   queryRatingSchema,
+  adminReplySchema,
+  updateStatusSchema,
 } from '../dto/rating.dto';
 
 export class RatingController {
@@ -299,6 +301,9 @@ export class RatingController {
       if (req.query.rating) {
         filters.rating = parseInt(req.query.rating as string);
       }
+      if (req.query.status) {
+        filters.status = req.query.status as string;
+      }
       if (req.query.search) {
         filters.search = req.query.search as string;
       }
@@ -365,6 +370,165 @@ export class RatingController {
         });
       }
     } catch (error: any) {
+      if (error.message.includes('không tồn tại')) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      next(error);
+    }
+  }
+
+  // Admin Reply Methods
+  async addAdminReply(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const adminId = req.user?._id;
+      if (!adminId) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
+
+      const { id } = req.params;
+      const validatedData = adminReplySchema.parse(req.body);
+
+      const rating = await ratingService.addAdminReply(
+        id,
+        adminId,
+        validatedData.content,
+      );
+
+      res.status(200).json({
+        success: true,
+        data: rating,
+        message: 'Trả lời đánh giá thành công',
+      });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        res.status(400).json({
+          success: false,
+          message: 'Dữ liệu không hợp lệ',
+          errors: error.errors,
+        });
+        return;
+      }
+
+      if (error.message.includes('không tồn tại')) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      next(error);
+    }
+  }
+
+  async updateAdminReply(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const validatedData = adminReplySchema.parse(req.body);
+
+      const rating = await ratingService.updateAdminReply(
+        id,
+        validatedData.content,
+      );
+
+      res.status(200).json({
+        success: true,
+        data: rating,
+        message: 'Cập nhật trả lời thành công',
+      });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        res.status(400).json({
+          success: false,
+          message: 'Dữ liệu không hợp lệ',
+          errors: error.errors,
+        });
+        return;
+      }
+
+      if (error.message.includes('không tồn tại')) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      next(error);
+    }
+  }
+
+  async deleteAdminReply(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const rating = await ratingService.deleteAdminReply(id);
+
+      res.status(200).json({
+        success: true,
+        data: rating,
+        message: 'Xóa trả lời thành công',
+      });
+    } catch (error: any) {
+      if (error.message.includes('không tồn tại')) {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      next(error);
+    }
+  }
+
+  // Status Management
+  async updateRatingStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const validatedData = updateStatusSchema.parse(req.body);
+
+      const rating = await ratingService.updateRatingStatus(
+        id,
+        validatedData.status,
+      );
+
+      res.status(200).json({
+        success: true,
+        data: rating,
+        message: 'Cập nhật trạng thái thành công',
+      });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        res.status(400).json({
+          success: false,
+          message: 'Dữ liệu không hợp lệ',
+          errors: error.errors,
+        });
+        return;
+      }
+
       if (error.message.includes('không tồn tại')) {
         res.status(404).json({
           success: false,

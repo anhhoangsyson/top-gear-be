@@ -44,6 +44,7 @@ export class RatingRepository {
     laptopId: string,
     page: number = 1,
     limit: number = 20,
+    includeHidden: boolean = false,
   ): Promise<{
     ratings: IRating[];
     total: number;
@@ -51,17 +52,22 @@ export class RatingRepository {
     totalPages: number;
   }> {
     const skip = (page - 1) * limit;
+    const query: any = { laptopId: new mongoose.Types.ObjectId(laptopId) };
+
+    // Chỉ hiển thị rating visible cho user thường
+    if (!includeHidden) {
+      query.status = 'visible';
+    }
 
     const [ratings, total] = await Promise.all([
-      Rating.find({ laptopId: new mongoose.Types.ObjectId(laptopId) })
+      Rating.find(query)
         .populate('userId', 'fullname email avatar')
         .populate('orderId', 'orderStatus')
+        .populate('adminReply.adminId', 'fullname email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
-      Rating.countDocuments({
-        laptopId: new mongoose.Types.ObjectId(laptopId),
-      }),
+      Rating.countDocuments(query),
     ]);
 
     return {
@@ -163,6 +169,7 @@ export class RatingRepository {
       userId?: string;
       laptopId?: string;
       rating?: number;
+      status?: string;
       search?: string;
     },
     page: number = 1,
@@ -192,6 +199,10 @@ export class RatingRepository {
       query.rating = filters.rating;
     }
 
+    if (filters.status) {
+      query.status = filters.status;
+    }
+
     if (filters.search) {
       query.$or = [{ comment: { $regex: filters.search, $options: 'i' } }];
     }
@@ -201,6 +212,7 @@ export class RatingRepository {
         .populate('userId', 'fullname email avatar')
         .populate('laptopId', 'name modelName images')
         .populate('orderId', 'orderStatus totalAmount')
+        .populate('adminReply.adminId', 'fullname email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -213,6 +225,73 @@ export class RatingRepository {
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  // Reply to rating (Admin only)
+  async addAdminReply(
+    ratingId: string,
+    adminId: string,
+    content: string,
+  ): Promise<IRating | null> {
+    return await Rating.findByIdAndUpdate(
+      ratingId,
+      {
+        adminReply: {
+          content,
+          adminId: new mongoose.Types.ObjectId(adminId),
+          repliedAt: new Date(),
+        },
+      },
+      { new: true },
+    )
+      .populate('userId', 'fullname email avatar')
+      .populate('laptopId', 'name modelName images')
+      .populate('orderId', 'orderStatus totalAmount')
+      .populate('adminReply.adminId', 'fullname email');
+  }
+
+  // Update admin reply
+  async updateAdminReply(
+    ratingId: string,
+    content: string,
+  ): Promise<IRating | null> {
+    return await Rating.findByIdAndUpdate(
+      ratingId,
+      {
+        'adminReply.content': content,
+      },
+      { new: true },
+    )
+      .populate('userId', 'fullname email avatar')
+      .populate('laptopId', 'name modelName images')
+      .populate('orderId', 'orderStatus totalAmount')
+      .populate('adminReply.adminId', 'fullname email');
+  }
+
+  // Delete admin reply
+  async deleteAdminReply(ratingId: string): Promise<IRating | null> {
+    return await Rating.findByIdAndUpdate(
+      ratingId,
+      {
+        $unset: { adminReply: 1 },
+      },
+      { new: true },
+    )
+      .populate('userId', 'fullname email avatar')
+      .populate('laptopId', 'name modelName images')
+      .populate('orderId', 'orderStatus totalAmount');
+  }
+
+  // Update rating status (Admin only)
+  async updateRatingStatus(
+    ratingId: string,
+    status: string,
+  ): Promise<IRating | null> {
+    return await Rating.findByIdAndUpdate(ratingId, { status }, { new: true })
+      .populate('userId', 'fullname email avatar')
+      .populate('laptopId', 'name modelName images')
+      .populate('orderId', 'orderStatus totalAmount')
+      .populate('adminReply.adminId', 'fullname email');
   }
 
   async getOverallStats(): Promise<{
