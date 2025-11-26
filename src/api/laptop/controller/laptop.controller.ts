@@ -6,16 +6,37 @@ export class LaptopController {
 
   async createLaptop(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!req.files || req.file instanceof Array) {
+      // Normalize req.files into an array for consistent handling.
+      const filesArray: Express.Multer.File[] = (() => {
+        if (!req.files) return [];
+        if (Array.isArray(req.files)) return req.files as Express.Multer.File[];
+        // when using upload.fields(), req.files is Record<string, Express.Multer.File[]>
+        const filesObj = req.files as Record<string, Express.Multer.File[]>;
+        return Object.values(filesObj).flat();
+      })();
+
+      if (filesArray.length === 0) {
         return res.status(400).json({ message: 'Vui lòng tải lên hình ảnh' });
       }
-      // parse 'specifications' field
-      const specifications = req.body.specifications
-        ? JSON.parse(req.body.specifications)
-        : {};
 
+      // parse 'specifications' field safely
+      let specifications: any = {};
+      if (req.body.specifications) {
+        try {
+          specifications =
+            typeof req.body.specifications === 'string'
+              ? JSON.parse(req.body.specifications)
+              : req.body.specifications;
+        } catch (e) {
+          specifications = {};
+        }
+      }
+
+      // parse tags (may be JSON string or omitted)
       const tags = req.body.tags
-        ? JSON.parse(req.body.tags)
+        ? typeof req.body.tags === 'string'
+          ? JSON.parse(req.body.tags)
+          : req.body.tags
         : [
             req.body.name,
             req.body.modelName,
@@ -23,48 +44,66 @@ export class LaptopController {
             specifications.ram ? `${specifications.ram}GB RAM` : '',
             specifications.storage ? `${specifications.storage}GB Storage` : '',
           ].filter(Boolean);
+
+      // parse seoMetadata (safe)
       const seoMetadata = req.body.seoMetadata
-        ? JSON.parse(req.body.seoMetadata)
+        ? typeof req.body.seoMetadata === 'string'
+          ? JSON.parse(req.body.seoMetadata)
+          : req.body.seoMetadata
         : {};
+
       const slug = req.body.name
-        ? req.body.name
+        ? String(req.body.name)
             .toLowerCase()
             .replace(/\s+/g, '-')
             .replace(/[^a-z0-9-]/g, '')
         : '';
-      console.log('slug', slug);
 
-      const imageUrls = (req.files as Express.Multer.File[]).map(
-        (file, index) => ({
-          imageUrl: (file as any).path, // URL của ảnh trên Cloudinary
-          altText: req.body?.altText[`${index}`] || '', // Alt text nếu có
-          isPrimary: false, // Mặc định không phải ảnh chính
-          sortOrder: index + 1, // thu tu hien thi cua hinh anh
-        }),
-      );
-      // Đánh dấu ảnh đầu tiên là ảnh chính
-      if (imageUrls.length > 0) {
-        imageUrls[0].isPrimary = true;
-      }
+      // parse altText which can be array, json-string or single string
+      const altTexts: string[] = (() => {
+        const at = req.body?.altText;
+        if (!at) return [];
+        if (Array.isArray(at)) return at;
+        if (typeof at === 'string') {
+          try {
+            const parsed = JSON.parse(at);
+            return Array.isArray(parsed) ? parsed : [String(parsed)];
+          } catch {
+            return [at];
+          }
+        }
+        return [];
+      })();
 
-      //  create default tasg
+      const imageUrls = filesArray.map((file, index) => ({
+        imageUrl: (file as any).path,
+        altText: altTexts[index] || '',
+        isPrimary: false,
+        sortOrder: index + 1,
+      }));
+
+      if (imageUrls.length > 0) imageUrls[0].isPrimary = true;
 
       const laptopData = {
         ...req.body,
-        specifications: specifications,
+        specifications,
         images: imageUrls,
         tags,
-        seoMetadata, // Lưu danh sách URL vào trường `images`
+        seoMetadata,
         slug,
       };
-      console.log(imageUrls);
-      console.log('laptopData', laptopData);
 
       const laptop = await this.laptopService.createLaptop(laptopData);
       res
         .status(201)
         .json({ data: laptop, message: 'Laptop created successfully' });
     } catch (error) {
+      // Handle Multer errors clearly
+      if ((error as any)?.name === 'MulterError') {
+        return res
+          .status(400)
+          .json({ success: false, error: (error as any).message });
+      }
       next(error);
     }
   }
