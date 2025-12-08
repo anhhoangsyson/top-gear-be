@@ -78,7 +78,7 @@ export class VoucherService {
       {
         _id: new Types.ObjectId(voucherId),
         status: 'active',
-        currentUsage: { $lt: '$maxUsage' }, // Chỉ update nếu còn slot
+        $expr: { $lt: ['$currentUsage', '$maxUsage'] }, // So sánh 2 fields
       },
       { $inc: { currentUsage: 1 } },
       { session, new: true },
