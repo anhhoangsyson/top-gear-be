@@ -11,8 +11,15 @@ export class PaymentController {
 
   async handleCallback(req: Request, res: Response) {
     try {
+      console.log('=== ZALOPAY CALLBACK RECEIVED ===');
+      console.log('Headers:', req.headers);
+      console.log('Body:', req.body);
+      console.log('Query:', req.query);
+      console.log('================================');
+
       const dto: CallbackDto = req.body;
       if (!dto.data || !dto.mac) {
+        console.log('Invalid callback data');
         return res.status(400).json({ error: 'Dữ liệu callback không hợp lệ' });
       }
       const result = await this.paymentService.handleCallback(dto);
@@ -20,7 +27,7 @@ export class PaymentController {
 
       return res.json(result);
     } catch (error) {
-      console.error(error);
+      console.error('Callback error:', error);
       return res.json({
         return_code: 0,
         return_message: (error as Error).message,

@@ -39,7 +39,10 @@ export class PaymentService {
         app_time: Date.now(),
         item: JSON.stringify([]),
         embed_data: JSON.stringify({
-          redirecturl: urlCalbackSuccess || 'https://e-com-two-psi.vercel.app',
+          redirecturl:
+            urlCalbackSuccess ||
+            'https://e-com-two-psi.vercel.app/payment/result',
+          merchantinfo: 'top-gear-ecommerce',
         }),
         amount: totalAmount,
         description: `Thanh toán đơn hàng ${order._id}`,

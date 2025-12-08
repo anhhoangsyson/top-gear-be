@@ -47,10 +47,28 @@ const server = http.createServer(app);
 app.use(
   cors({
     credentials: true,
-    origin: [
-      process.env.CORS_ORIGIN || 'http://localhost:3001',
-      'https://e-com-two-psi.vercel.app',
-    ],
+    origin: function (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) {
+      // Cho phép requests không có origin (như Postman, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        process.env.CORS_ORIGIN || 'http://localhost:3001',
+        'https://e-com-two-psi.vercel.app',
+      ];
+
+      // Cho phép callback từ ZaloPay (sb-openapi.zalopay.vn hoặc openapi.zalopay.vn)
+      if (
+        origin.includes('zalopay.vn') ||
+        allowedOrigins.indexOf(origin) !== -1
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: 'Content-Type,Authorization',
   }),
