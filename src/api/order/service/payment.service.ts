@@ -39,14 +39,14 @@ export class PaymentService {
         app_time: Date.now(),
         item: JSON.stringify([]),
         embed_data: JSON.stringify({
-          redirecturl: urlCalbackSuccess || 'https://e-com-two-psi.vercel.app/',
+          redirecturl: urlCalbackSuccess || 'https://e-com-two-psi.vercel.app',
         }),
         amount: totalAmount,
         description: `Thanh toán đơn hàng ${order._id}`,
         bank_code: '',
         callback_url:
           // 'https://210f-42-115-74-118.ngrok-free.app/api/v1/order/callback', use this for local dev
-          'https://e-com-two-psi.vercel.app/api/v1/order/callback',
+          'https://api-ecomerce-be9f.onrender.com/api/v1/order/callback',
         //  use above for production
         mac: '',
       };
