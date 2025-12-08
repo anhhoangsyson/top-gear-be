@@ -48,9 +48,8 @@ export class PaymentService {
         description: `Thanh toán đơn hàng ${order._id}`,
         bank_code: '',
         callback_url:
-          // 'https://210f-42-115-74-118.ngrok-free.app/api/v1/order/callback', use this for local dev
+          process.env.ZALOPAY_CALLBACK_URL ||
           'https://api-ecomerce-be9f.onrender.com/api/v1/order/callback',
-        //  use above for production
         mac: '',
       };
 
