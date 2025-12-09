@@ -41,7 +41,7 @@ export class PaymentService {
         embed_data: JSON.stringify({
           redirecturl:
             urlCalbackSuccess ||
-            'https://e-com-two-psi.vercel.app/payment/result',
+            'https://e-com-two-psi.vercel.app/checkout/success',
           merchantinfo: 'top-gear-ecommerce',
         }),
         amount: totalAmount,
