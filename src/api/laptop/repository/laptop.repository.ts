@@ -23,8 +23,16 @@ export class LaptopRepository {
       .exec();
   }
 
-  async findAllLaptops(): Promise<ILaptop[]> {
-    return await Laptop.find()
+  async findAllLaptops(status?: 'active' | 'all'): Promise<ILaptop[]> {
+    const filter: any = {};
+
+    // Nếu status là 'active', chỉ lấy laptop có isActive = true
+    // Nếu status là 'all' hoặc không truyền, lấy tất cả
+    if (status === 'active') {
+      filter.isActive = true;
+    }
+
+    return await Laptop.find(filter)
       .populate('brandId', 'name logo')
       .populate('categoryId', 'name slug')
       .exec();
@@ -34,7 +42,10 @@ export class LaptopRepository {
     id: string,
     laptopData: Partial<ILaptop>,
   ): Promise<ILaptop | null> {
-    return await Laptop.findByIdAndUpdate(id, laptopData, { new: true }).exec();
+    return await Laptop.findByIdAndUpdate(id, laptopData, { new: true })
+      .populate('brandId', 'name logo')
+      .populate('categoryId', 'name slug')
+      .exec();
   }
 
   async deleteLaptop(id: string): Promise<ILaptop | null> {
@@ -53,7 +64,7 @@ export class LaptopRepository {
     categoryId: string,
     excludeId: string,
   ): Promise<ILaptop[]> {
-    const filter: any = { brandId, categoryId };
+    const filter: any = { brandId, categoryId, isActive: true };
 
     if (excludeId) {
       filter._id = { $ne: excludeId };
@@ -70,7 +81,7 @@ export class LaptopRepository {
       throw new Error('Category not found');
     }
 
-    return Laptop.find({ categoryId: category._id, ...filters })
+    return Laptop.find({ categoryId: category._id, isActive: true, ...filters })
       .populate('brandId', 'name logo')
       .populate('categoryId', 'name slug')
       .exec();
@@ -85,7 +96,7 @@ export class LaptopRepository {
       throw new Error('Brand not found');
     }
 
-    return await Laptop.find({ brandId: brand._id, ...filters })
+    return await Laptop.find({ brandId: brand._id, isActive: true, ...filters })
       .populate('brandId', 'name logo')
       .populate('categoryId', 'name slug')
       .exec();
@@ -108,6 +119,7 @@ export class LaptopRepository {
     return await Laptop.find({
       categoryId: category._id,
       brandId: brand._id,
+      isActive: true,
       ...filters,
     })
       .populate('brandId', 'name logo')
@@ -116,7 +128,13 @@ export class LaptopRepository {
   }
 
   async filterLaptops(filter: any): Promise<ILaptop[]> {
-    return await Laptop.find(filter)
+    // Thêm điều kiện isActive = true cho customer
+    const finalFilter = {
+      ...filter,
+      isActive: true,
+    };
+
+    return await Laptop.find(finalFilter)
       .populate('brandId', 'name logo')
       .populate('categoryId', 'name slug')
       .exec();

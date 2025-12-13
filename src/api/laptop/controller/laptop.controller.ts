@@ -122,7 +122,18 @@ export class LaptopController {
 
   async getAllLaptops(req: Request, res: Response, next: NextFunction) {
     try {
-      const laptops = await this.laptopService.getAllLaptops();
+      const { status } = req.query;
+
+      // Validate status parameter
+      if (status && status !== 'active' && status !== 'all') {
+        return res.status(400).json({
+          message: 'Invalid status parameter. Use "active" or "all"',
+        });
+      }
+
+      const laptops = await this.laptopService.getAllLaptops(
+        status as 'active' | 'all' | undefined,
+      );
       res.status(200).json({ data: laptops });
     } catch (error) {
       next(error);
@@ -131,10 +142,99 @@ export class LaptopController {
 
   async updateLaptop(req: Request, res: Response, next: NextFunction) {
     try {
+      console.log('Update laptop ID:', req.params.id);
+      console.log('Update data:', JSON.stringify(req.body, null, 2));
+
+      // Parse 'specifications' field if it's a JSON string
+      let specifications: any;
+      if (req.body.specifications) {
+        try {
+          specifications =
+            typeof req.body.specifications === 'string'
+              ? JSON.parse(req.body.specifications)
+              : req.body.specifications;
+        } catch (e) {
+          // If parsing fails, keep the original value
+          specifications = req.body.specifications;
+        }
+      }
+
+      // Parse tags if it's a JSON string
+      let tags: any;
+      if (req.body.tags) {
+        try {
+          tags =
+            typeof req.body.tags === 'string'
+              ? JSON.parse(req.body.tags)
+              : req.body.tags;
+        } catch (e) {
+          tags = req.body.tags;
+        }
+      }
+
+      // Parse seoMetadata if it's a JSON string
+      let seoMetadata: any;
+      if (req.body.seoMetadata) {
+        try {
+          seoMetadata =
+            typeof req.body.seoMetadata === 'string'
+              ? JSON.parse(req.body.seoMetadata)
+              : req.body.seoMetadata;
+        } catch (e) {
+          seoMetadata = req.body.seoMetadata;
+        }
+      }
+
+      // Handle new images if provided
+      const filesArray: Express.Multer.File[] = (() => {
+        if (!req.files) return [];
+        if (Array.isArray(req.files)) return req.files as Express.Multer.File[];
+        const filesObj = req.files as Record<string, Express.Multer.File[]>;
+        return Object.values(filesObj).flat();
+      })();
+
+      const updateData: any = {
+        ...req.body,
+        ...(specifications && { specifications }),
+        ...(tags && { tags }),
+        ...(seoMetadata && { seoMetadata }),
+      };
+
+      // If new images are uploaded, process them
+      if (filesArray.length > 0) {
+        const altTexts: string[] = (() => {
+          const at = req.body?.altText;
+          if (!at) return [];
+          if (Array.isArray(at)) return at;
+          if (typeof at === 'string') {
+            try {
+              const parsed = JSON.parse(at);
+              return Array.isArray(parsed) ? parsed : [String(parsed)];
+            } catch {
+              return [at];
+            }
+          }
+          return [];
+        })();
+
+        const imageUrls = filesArray.map((file, index) => ({
+          imageUrl: (file as any).path,
+          altText: altTexts[index] || '',
+          isPrimary: false,
+          sortOrder: index + 1,
+        }));
+
+        if (imageUrls.length > 0) imageUrls[0].isPrimary = true;
+        updateData.images = imageUrls;
+      }
+
       const laptop = await this.laptopService.updateLaptop(
         req.params.id,
-        req.body,
+        updateData,
       );
+
+      console.log('Updated laptop:', JSON.stringify(laptop, null, 2));
+
       if (!laptop) {
         return res.status(404).json({ message: 'Laptop not found' });
       }

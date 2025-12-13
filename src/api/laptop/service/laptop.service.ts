@@ -14,8 +14,8 @@ export class LaptopService {
     return await this.laptopRepository.findLaptopById(id);
   }
 
-  async getAllLaptops(): Promise<ILaptop[]> {
-    return await this.laptopRepository.findAllLaptops();
+  async getAllLaptops(status?: 'active' | 'all'): Promise<ILaptop[]> {
+    return await this.laptopRepository.findAllLaptops(status);
   }
 
   async updateLaptop(

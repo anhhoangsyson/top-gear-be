@@ -80,7 +80,7 @@ laptopRouter.get('/', (req, res, next) => {
   laptopController.getAllLaptops(req, res, next);
 });
 
-laptopRouter.put('/:id', (req, res, next) => {
+laptopRouter.put('/:id', uploadMultiple, (req, res, next) => {
   laptopController.updateLaptop(req, res, next);
 });
 
